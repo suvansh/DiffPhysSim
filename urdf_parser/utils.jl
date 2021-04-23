@@ -33,11 +33,31 @@ end
 
 function quat_ang_mat(quat)
     w, x, y, z = quat
-    0.5 * [
+    [
         -x -y -z;
          w  z -y;
         -z  w  x;
          y -x  w
+    ]
+end
+
+function quat_L(quat)
+    w, x, y, z = quat
+    [
+        w  -x  -y  -z;
+        x   w  -z   y;
+        y   z   w  -x;
+        z  -y   x   w;
+    ]
+end
+
+function quat_R(quat)
+    w, x, y, z = quat
+    [
+        w  -x  -y  -z;
+        x   w   z  -y;
+        y  -z   w   x;
+        z   y  -x   w;
     ]
 end
 

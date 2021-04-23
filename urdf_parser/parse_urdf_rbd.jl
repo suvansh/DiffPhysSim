@@ -166,7 +166,7 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
             BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(chunk[4:7])])
                 for chunk in Iterators.partition(state, 7)
         ])
-        J = ForwardDiff.jacobian(constraint_fn, state)
+        J = ForwardDiff.jacobian(constraint, state)
         J * quat_ang_mat_full
     end
 
@@ -210,13 +210,13 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
 end
 
 function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
-    D1(first, second) = ForwardDiff.gradient(first -> lagrangian(first, second, [], Δt), first)
-    D2(first, second) = ForwardDiff.gradient(second -> lagrangian(first, second, [], Δt), second)
+    D1(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(first[4:7])]))' * ForwardDiff.gradient(first -> lagrangian(first, second, [], Δt), first)
+    D2(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(second[4:7])]))' * ForwardDiff.gradient(second -> lagrangian(first, second, [], Δt), second)
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
     while t < time
         objective(q3) = D2(q1, q2) + D1(q2, q3)
-        q3 = newton(objective, q2)
+        q3 = newton(objective, q2, quat_adjust=true)
         println(objective(q3))
         push!(qs, q3)
         q1, q2 = q2, q3
@@ -244,25 +244,43 @@ end
 # rand_quat = rand(4)
 # test_state1 = cat(test_state0[1:3] .+ [0.0, 0.0, 0.0], rand_quat / norm(rand_quat), dims=1)
 # # test_state1 = get_test_state(mechanism)
-
-test_state0 = cat(rand(3), [0.995, 0.0, -0.096, 0.032], dims=1)
-test_state1 = cat(test_state0[1:3], [1, 0, 0, 0], dims=1)
-# test_state1 = cat(test_state0[1:3], [0.983, -0.001, -0.174, 0.058], dims=1)
+test_state0 = cat(zeros(3), [1, 0, 0, 0], dims=1)
+# test_state1 = cat(zeros(3), [0.999048222, 0.0, 0.0436193874, 0.0], dims=1)
+test_state1 = cat(zeros(3), [0.999, 0.0, 0.0436, 0.0001], dims=1)
 test_state0, test_state1
 constraint_fn(test_state0)
 lagrangian(test_state0, test_state1, [], 0.01)
-qs = simulate_unconstrained_system(test_state0, test_state1, 0.05, lagrangian, 0.5)
+qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 150)
 
 vis = Visualizer()
 delete!(vis)
 render(vis)
-setobject!(vis[:link], Rect(Vec(0., 0, 0), Vec(0.1, 0.2, 0.3)))
+
+# axis_case ∈ ["maximal", "intermediate", "minimal"]
+axis_case = "maximal"
+if axis_case == "maximal"
+    # singleton.urdf should have Ixx = 1.2, Iyy = 2.4, Izz = 0.8
+    # <inertia ixx="1.2" ixy="0" ixz="0" iyy="2.4" iyz="0" izz="0.8" />
+    box_dims = [0.4, 0.2, 0.6]
+elseif axis_case == "intermediate"
+    # singleton.urdf should have Ixx = 2.4, Iyy = 1.2, Izz = 0.8
+    # <inertia ixx="2.4" ixy="0" ixz="0" iyy="1.2" iyz="0" izz="0.8" />
+    box_dims = [0.2, 0.4, 0.6]
+elseif axis_case == "minimal"
+    # singleton.urdf should have Ixx = 1.2, Iyy = 0.8, Izz = 2.4
+    # <inertia ixx="1.2" ixy="0" ixz="0" iyy="0.8" iyz="0" izz="2.4" />
+    box_dims = [0.4, 0.6, 0.2]
+else
+    throw(DomainError(string(axis_case), "unsupported axis case"))
+end
+
+# animate
+setobject!(vis[:link], Rect(Vec(-box_dims./2...), Vec(box_dims...)))
 anim = Animation()
-anim_frames_per_sim_frame = 1
 for i = 1:length(qs)
     pos_i, quat_i = qs[i][1:3], Quaternion(qs[i][4:7]...)
     angle_i, axis_i = angleaxis(quat_i)
-    atframe(anim, i*anim_frames_per_sim_frame) do
+    atframe(anim, i) do
         settransform!(vis[:link], compose(Translation(qs[i][1:3]), LinearMap(AngleAxis(angle_i, axis_i...))))
     end
 end
