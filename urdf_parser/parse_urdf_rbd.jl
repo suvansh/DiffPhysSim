@@ -17,18 +17,6 @@ acrobot_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/
 cassie_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/cassie-old.urdf"
 strandbeest_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/strandbeest.urdf"
 
-"""
-need a function that takes in state and link ID and returns the link-specific state
-constraint function:
-    take in state
-    loop over joints
-        for parent and child JointLinks
-            get link-state from state and JointLink.link
-            get axis in body frame from JointLink.axis
-            get anchor offset from CoG from JointLink.offset
-            using axis and link-state's orientation, get axis in world frame
-            using offset and link-state's position and orientation, get offset in world frame
-"""
 GRAVITATIONAL_ACCELERATION = 0#9.81
 
 function add_loop_joints!(mechanism::RBD.Mechanism{T}, urdf::AbstractString) where T
@@ -69,7 +57,7 @@ function constraint_vector(mechanism, state, body_order_dict)
         child_body = RBD.successor(joint, mechanism)
         parent_idx = 7 * body_order_dict[parent_body.id] - 6
         child_idx = 7 * body_order_dict[child_body.id] - 6
-        parent_com = RBD.has_defined_inertia(parent_body) ?
+        parent_com = check_mass(parent_body) ?
                         parent_body.inertia.cross_part / parent_body.inertia.mass :
                         zeros(3)
         child_com = child_body.inertia.cross_part / child_body.inertia.mass
@@ -95,6 +83,9 @@ function constraint_vector(mechanism, state, body_order_dict)
         child_anc_wf = child_pos + child_rot * child_com_to_joint
         # dof pos and ori constraints
         pos_diff = parent_anc_wf - child_anc_wf
+        # println("parent: $(parent_pos)\n\t$(parent_rot)\n\t$(parent_com_to_joint)\n\t$(parent_com)")
+        # println("child: $(child_pos),\n\t$(child_rot)\n\t$(child_com_to_joint)\n\t$(child_com)")
+        # println()
         # TODO ask zac if this is a good way to do ori constraint for fixed
         ori_diff = parent_rpy - child_rpy
 
@@ -160,14 +151,7 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
     end
 
     function constraint_jac(state)
-        # to get the second dim from 7*num_links to 6*num_links
-        # TODO this is prob a slow way to do this
-        quat_ang_mat_full = BlockDiagonal([
-            BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(chunk[4:7])])
-                for chunk in Iterators.partition(state, 7)
-        ])
-        J = ForwardDiff.jacobian(constraint, state)
-        J * quat_ang_mat_full
+        ForwardDiff.jacobian(constraint, state) * attitude_jacobian_from_configs(state)
     end
 
     function lagrangian(q1, q2, λ, Δt)
@@ -182,6 +166,7 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
         # chunk states into groups of 7 for each body
         q1_groups = collect(Iterators.partition(q1, 7))
         q2_groups = collect(Iterators.partition(q2, 7))
+        # get the velocity and average config per body
         for (idx, (q1i, q2i)) in enumerate(zip(q1_groups, q2_groups))
             pos1, quat1 = q1i[1:3], Quaternion(q1i[4:7]...)
             pos2, quat2 = q2i[1:3], Quaternion(q2i[4:7]...)
@@ -198,10 +183,11 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
         end
         vel = cat(diff..., dims=1) / Δt
         qavg = cat(avg..., dims=1)
+        # calculate Lagrangian
         T = vel'*M*vel
         U = sum(body.inertia.mass * gravity * (q1i[3] + q2i[3])/2
-                for (body, q1i, q2i) in zip(mass_bodies, q1_groups, q2_groups))
-        C = constraint(qavg)
+                for (body, q1i, q2i) in zip(mass_bodies, q1_groups[mass_body_idxs], q2_groups[mass_body_idxs]))
+        C = constraint(q2)
         Cλ = isempty(C) ? 0 : C'*λ  # λ ignored if no constraints
         Δt * (T - U + Cλ)
     end
@@ -210,13 +196,13 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
 end
 
 function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
-    D1(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(first[4:7])]))' * ForwardDiff.gradient(first -> lagrangian(first, second, [], Δt), first)
-    D2(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(second[4:7])]))' * ForwardDiff.gradient(second -> lagrangian(first, second, [], Δt), second)
+    D1(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(first[4:7])]))' * ForwardDiff.gradient(first -> lagrangian(first, second, [], Δt), first)
+    D2(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(second[4:7])]))' * ForwardDiff.gradient(second -> lagrangian(first, second, [], Δt), second)
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
     while t < time
         objective(q3) = D2(q1, q2) + D1(q2, q3)
-        q3 = newton(objective, q2, quat_adjust=true)
+        q3 = newton(objective, q2, quat_adjust=true, len_config=length(q2))
         println(objective(q3))
         push!(qs, q3)
         q1, q2 = q2, q3
@@ -225,8 +211,26 @@ function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
     qs
 end
 
-
-mechanism, mass_matrix, constraint_fn, jacobian_fn, lagrangian = process_urdf(singleton_path, floating=true)
+function simulate_constrained_system(q1, q2, Δt, lagrangian, num_constraints, time)
+    D1(first, second, λ) = attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, λ, Δt), first)
+    D2(first, second, λ) = attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, λ, Δt), second)
+    qs = [q1, q2]
+    t = 2 * Δt  # first two configs given
+    λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
+    while t < time
+        # x contains q3 ∈ ℜˢ, λ₁ ∈ ℜᶜ, λ₂ ∈ ℜᶜ, where s = num_configs, c = num_constraints
+        objective(x) = D2(q1, q2, x[length(q2)+1:length(q2)+num_constraints]) + D1(q2, x[1:length(q2)], x[length(q2)+1+num_constraints:end])
+        x0 = cat(q2, λ₁, λ₂, dims=1)
+        x = newton(objective, x0, quat_adjust=true, len_config=length(q2))
+        q3 = x[1:length(q2)]
+        λ₁ = x[length(q2)+1:length(q2)+num_constraints]
+        λ₂ = x[length(q2)+1+num_constraints:end]
+        push!(qs, q3)
+        q1, q2 = q2, q3
+        t += Δt
+    end
+    qs
+end
 
 function get_test_state(mechanism::RBD.Mechanism; pos_offset=0)
     n = length(get_bodies(mechanism))
@@ -239,19 +243,32 @@ function get_test_state(mechanism::RBD.Mechanism; pos_offset=0)
     end
     cat(z..., dims=1)
 end
-# test_state0 = get_test_state(mechanism, pos_offset=0.01)
-# # test_state1 = cat(rand(3), test_state0[4:7], dims=1)
-# rand_quat = rand(4)
-# test_state1 = cat(test_state0[1:3] .+ [0.0, 0.0, 0.0], rand_quat / norm(rand_quat), dims=1)
-# # test_state1 = get_test_state(mechanism)
-test_state0 = cat(zeros(3), [1, 0, 0, 0], dims=1)
-# test_state1 = cat(zeros(3), [0.999048222, 0.0, 0.0436193874, 0.0], dims=1)
-test_state1 = cat(zeros(3), [0.999, 0.0, 0.0436, 0.0001], dims=1)
-test_state0, test_state1
-constraint_fn(test_state0)
-lagrangian(test_state0, test_state1, [], 0.01)
-qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 150)
 
+
+mechanism, mass_matrix, constraint_fn, jacobian_fn, lagrangian = process_urdf(acrobot_path, floating=false)
+num_constraints = length(constraint_fn(get_test_state(mechanism)))
+
+function get_acrobot_state(θ₁, θ₂)
+    return [0, 0, 0, 1, 0, 0, 0,  # fixed
+            -0.5sin(θ₁), 0.15, -0.5cos(θ₁), cos(0.5θ₁), 0, sin(0.5θ₁), 0,  # upper link
+            -sin(θ₁)-sin(θ₁+θ₂), 0.25, -cos(θ₁)-cos(θ₁+θ₂), cos(0.5(θ₁+θ₂)), 0, sin(0.5(θ₁+θ₂)), 0]  # lower link
+end
+
+# for acrobot
+test_state0 = get_acrobot_state(0, 0)
+test_state1 = get_acrobot_state(0.05, 0.06)
+
+# for singleton
+# test_state0 = cat(zeros(3), [1, 0, 0, 0], dims=1)
+# test_state1 = cat(zeros(3), [0.999, 0.0, 0.0436, 0.0001], dims=1)
+
+test_state0, test_state1
+get_test_state(mechanism)
+constraint_fn(test_state1)
+# lagrangian(test_state0, test_state1, [], 0.01)
+# qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 3)
+qs = simulate_constrained_system(test_state0, test_state1, 0.1, lagrangian, num_constraints, 2)
+[norm(constraint_fn(q)) for q in qs]
 vis = Visualizer()
 delete!(vis)
 render(vis)

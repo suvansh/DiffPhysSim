@@ -31,7 +31,7 @@ function orthogonal_complement(vec)
     qr([vec I]).Q[:,2:3]'
 end
 
-function quat_ang_mat(quat)
+function attitude_jacobian(quat)
     w, x, y, z = quat
     [
         -x -y -z;
@@ -39,6 +39,14 @@ function quat_ang_mat(quat)
         -z  w  x;
          y -x  w
     ]
+end
+
+function attitude_jacobian_from_configs(q)
+    # println(size(q))
+    convert(Array{Float64}, BlockDiagonal([
+        BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(chunk[4:7])])
+            for chunk in Iterators.partition(q, 7)
+    ]))
 end
 
 function quat_L(quat)
