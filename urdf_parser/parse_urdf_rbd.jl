@@ -86,7 +86,7 @@ function constraint_vector(mechanism, state, body_order_dict)
         # println("parent: $(parent_pos)\n\t$(parent_rot)\n\t$(parent_com_to_joint)\n\t$(parent_com)")
         # println("child: $(child_pos),\n\t$(child_rot)\n\t$(child_com_to_joint)\n\t$(child_com)")
         # println()
-        # TODO ask zac if this is a good way to do ori constraint for fixed
+        # TODO this prob needs to be x y z angles (not Euler but absolute)
         ori_diff = parent_rpy - child_rpy
 
         """ joint-specific pos/ori constraints if not 3-dof constraints """
@@ -102,9 +102,8 @@ function constraint_vector(mechanism, state, body_order_dict)
             parent_frame_axis = RBD.rotation(RBD.joint_to_predecessor(joint))' * joint.joint_type.axis
             parent_axis_world_frame = parent_rot * parent_frame_axis
             child_axis_world_frame = child_rot * child_frame_axis
-            cross_product = cross(parent_axis_world_frame, child_axis_world_frame)
-            parent_axis_perp = orthogonal_complement(parent_frame_axis)
-            ori_diff = parent_axis_perp * parent_rot' * cross_product
+            parent_axis_world_perp = orthogonal_complement(parent_axis_world_frame)
+            ori_diff = parent_axis_world_perp * child_axis_world_frame
         elseif joint.joint_type isa RBD.Fixed
         elseif joint.joint_type isa RBD.Prismatic
             parent_frame_axis = RBD.rotation(RBD.joint_to_predecessor(joint))' * joint.joint_type.axis
@@ -118,6 +117,88 @@ function constraint_vector(mechanism, state, body_order_dict)
             throw(DomainError(string(joint.joint_type), "unsupported joint type"))
         end
         push!(C, cat(pos_diff, ori_diff, dims=1))
+    end
+    isempty(C) ? C : cat(C..., dims=1)  # handle no joints case
+end
+
+function make_jac(jac_local, parent_body, child_body, body_order_dict)
+    """ jac_local contains the jacobians for the two bodies.
+    these must be laid out in the correct place for the relevant body idxs. """
+    parent_jac_idx = 6 * body_order_dict[parent_body.id] - 5
+    child_jac_idx = 6 * body_order_dict[child_body.id] - 5
+    jac = zeros(size(jac_local, 1), 6*length(body_order_dict))
+    jac[:, parent_jac_idx:parent_jac_idx+5] = jac_local[:, 1:6]
+    jac[:, child_jac_idx:child_jac_idx+5] = jac_local[:, 7:12]
+    jac
+end
+
+function constraint_vector_jac(mechanism, state, body_order_dict)
+    C = []
+    for joint in get_joints(mechanism)
+        parent_body = RBD.predecessor(joint, mechanism)
+        child_body = RBD.successor(joint, mechanism)
+        parent_idx = 7 * body_order_dict[parent_body.id] - 6
+        child_idx = 7 * body_order_dict[child_body.id] - 6
+        parent_com = check_mass(parent_body) ?
+                        parent_body.inertia.cross_part / parent_body.inertia.mass :
+                        zeros(3)
+        child_com = child_body.inertia.cross_part / child_body.inertia.mass
+        parent_state = state[parent_idx:parent_idx+6]
+        child_state = state[child_idx:child_idx+6]
+
+        """ positional constraint
+        we take the difference between the anchor positions in world frame
+        """
+        parent_rot = quat_to_rot(parent_state[4:7])
+        parent_rpy = quat_to_rpy(parent_state[4:7])
+        parent_pos = parent_state[1:3]
+        child_rot = quat_to_rot(child_state[4:7])
+        child_rpy = quat_to_rpy(child_state[4:7])
+        child_pos = child_state[1:3]
+
+        # com->joint = (orig->joint) - (orig->com)
+        parent_com_to_joint = RBD.translation(RBD.joint_to_predecessor(joint)) - parent_com  # body frame
+        # TODO check if joint_to_successor is orig->joint (assumed below)
+        # otherwise first term in child_com_to_joint needs to be negated (relevant for loop_joints)
+        child_com_to_joint = RBD.translation(RBD.joint_to_successor(joint)) - child_com  # body frame
+        parent_anc_wf = parent_pos + parent_rot * parent_com_to_joint
+        child_anc_wf = child_pos + child_rot * child_com_to_joint
+        # dof pos and ori constraints
+        pos_diff_jac = cat(Matrix(I, 3, 3), -hat(parent_rot * parent_com_to_joint), -Matrix(I, 3, 3), hat(child_rot * child_com_to_joint), dims=2)
+        pos_diff = parent_anc_wf - child_anc_wf
+        # TODO ask zac if this is a good way to do ori constraint for fixed
+        ori_diff_jac = cat(zeros(3, 3), Matrix(I, 3, 3), zeros(3, 3), -Matrix(I, 3, 3), dims=2)
+
+        """ joint-specific pos/ori constraints if not 3-dof constraints """
+        if joint.joint_type isa RBD.Revolute
+            """ orientation constraint
+            we want a minimal (2d) representation of the 3d axis error
+            take cross product of the world frame axes and project onto
+            orthogonal complement of parent axis, finding coords in this plane
+            """
+            # TODO check if joint_to_successor is needed for rotation here, and whether it should be transposed
+            # I assume so for loop_joint case (otherwise should be no rotation between origin and com?)
+            child_frame_axis = RBD.rotation(RBD.joint_to_successor(joint))' * joint.joint_type.axis
+            parent_frame_axis = RBD.rotation(RBD.joint_to_predecessor(joint))' * joint.joint_type.axis
+            parent_axis_world_frame = parent_rot * parent_frame_axis
+            child_axis_world_frame = child_rot * child_frame_axis
+            parent_axis_world_perp = orthogonal_complement(parent_axis_world_frame)
+            ori_diff_jac = cat(zeros(2, 3), parent_axis_world_perp * hat(child_axis_world_frame), zeros(2, 3), -parent_axis_world_perp * hat(child_axis_world_frame), dims=2)
+        elseif joint.joint_type isa RBD.Fixed
+        elseif joint.joint_type isa RBD.Prismatic
+            child_frame_axis = RBD.rotation(RBD.joint_to_successor(joint))' * joint.joint_type.axis
+            parent_frame_axis = RBD.rotation(RBD.joint_to_predecessor(joint))' * joint.joint_type.axis
+            parent_axis_world_frame = parent_rot * parent_frame_axis
+            child_axis_world_frame = child_rot * child_frame_axis
+            child_axis_world_perp = orthogonal_complement(child_axis_world_frame)
+            pos_diff_jac = cat(child_axis_world_perp, -child_axis_world_perp * hat(parent_rot * parent_com_to_joint), -child_axis_world_perp, child_axis_world_perp * hat(pos_diff + child_rot * child_com_to_joint))
+        elseif joint.joint_type isa RBD.QuaternionFloating
+            # no constraint
+            continue
+        else
+            throw(DomainError(string(joint.joint_type), "unsupported joint type"))
+        end
+        push!(C, make_jac(cat(pos_diff_jac, ori_diff_jac, dims=1), parent_body, child_body, body_order_dict))
     end
     isempty(C) ? C : cat(C..., dims=1)  # handle no joints case
 end
@@ -151,10 +232,12 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
     end
 
     function constraint_jac(state)
-        ForwardDiff.jacobian(constraint, state) * attitude_jacobian_from_configs(state)
+        # 5/1 TODO replace with closed form constraint jac to allow double forwarddiff
+        # ForwardDiff.jacobian(constraint, state) * attitude_jacobian_from_configs(state)
+        constraint_vector_jac(mechanism, state, body_order_dict)
     end
 
-    function lagrangian(q1, q2, λ, Δt)
+    function lagrangian(q1, q2, Δt)
         """
         discrete Lagrangian.
         implements Ld(q1, q2, λ, Δt) = Δt * L((q1+q2)/2, (q2-q1)/Δt),
@@ -187,9 +270,9 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
         T = vel'*M*vel
         U = sum(body.inertia.mass * gravity * (q1i[3] + q2i[3])/2
                 for (body, q1i, q2i) in zip(mass_bodies, q1_groups[mass_body_idxs], q2_groups[mass_body_idxs]))
-        C = constraint(q2)
-        Cλ = isempty(C) ? 0 : C'*λ  # λ ignored if no constraints
-        Δt * (T - U + Cλ)
+        # C = constraint(q2)
+        # Cλ = isempty(C) ? 0 : C'*λ  # λ ignored if no constraints
+        Δt * (T - U)
     end
 
     mechanism, mass_matrix, constraint, constraint_jac, lagrangian
@@ -211,20 +294,21 @@ function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
     qs
 end
 
-function simulate_constrained_system(q1, q2, Δt, lagrangian, num_constraints, time)
-    D1(first, second, λ) = attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, λ, Δt), first)
-    D2(first, second, λ) = attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, λ, Δt), second)
+function simulate_constrained_system(q1, q2, Δt, lagrangian, constraint_fn, constraint_jac, num_constraints, time)
+    D1(first, second) = attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, Δt), first)
+    D2(first, second) = attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, Δt), second)
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
-    λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
+    # λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
+    λ = zeros(num_constraints)
     while t < time
         # x contains q3 ∈ ℜˢ, λ₁ ∈ ℜᶜ, λ₂ ∈ ℜᶜ, where s = num_configs, c = num_constraints
-        objective(x) = D2(q1, q2, x[length(q2)+1:length(q2)+num_constraints]) + D1(q2, x[1:length(q2)], x[length(q2)+1+num_constraints:end])
-        x0 = cat(q2, λ₁, λ₂, dims=1)
+        objective(x) = cat(D2(q1, q2) + D1(q2, x[1:length(q2)]) + constraint_jac(x[1:length(q2)])' * x[length(q2)+1:end],
+                            constraint_fn(x[1:length(q2)]), dims=1)
+        x0 = cat(q2, λ, dims=1)
         x = newton(objective, x0, quat_adjust=true, len_config=length(q2))
         q3 = x[1:length(q2)]
-        λ₁ = x[length(q2)+1:length(q2)+num_constraints]
-        λ₂ = x[length(q2)+1+num_constraints:end]
+        λ = x[length(q2)+1:end]
         push!(qs, q3)
         q1, q2 = q2, q3
         t += Δt
@@ -245,7 +329,7 @@ function get_test_state(mechanism::RBD.Mechanism; pos_offset=0)
 end
 
 
-mechanism, mass_matrix, constraint_fn, jacobian_fn, lagrangian = process_urdf(acrobot_path, floating=false)
+mechanism, mass_matrix, constraint_fn, constraint_jac, lagrangian = process_urdf(acrobot_path, floating=false)
 num_constraints = length(constraint_fn(get_test_state(mechanism)))
 
 function get_acrobot_state(θ₁, θ₂)
@@ -264,10 +348,15 @@ test_state1 = get_acrobot_state(0.05, 0.06)
 
 test_state0, test_state1
 get_test_state(mechanism)
+constraint_jac(test_state1)
 constraint_fn(test_state1)
+println(ForwardDiff.jacobian(constraint_fn, test_state1) * attitude_jacobian_from_configs(test_state1))
+println(constraint_jac(test_state1))
 # lagrangian(test_state0, test_state1, [], 0.01)
 # qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 3)
-qs = simulate_constrained_system(test_state0, test_state1, 0.1, lagrangian, num_constraints, 2)
+ForwardDiff.jacobian(constraint_fn, test_state1) * attitude_jacobian_from_configs(test_state1)
+
+qs = simulate_constrained_system(test_state0, test_state1, 0.1, lagrangian, constraint_fn, constraint_jac, num_constraints, 2)
 [norm(constraint_fn(q)) for q in qs]
 vis = Visualizer()
 delete!(vis)
