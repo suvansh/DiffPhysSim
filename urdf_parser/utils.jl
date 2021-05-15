@@ -35,9 +35,9 @@ function attitude_jacobian(quat)
     w, x, y, z = quat
     [
         -x -y -z;
-         w  z -y;
-        -z  w  x;
-         y -x  w
+         w -z  y;
+         z  w -x;
+        -y  x  w
     ]
 end
 
@@ -47,6 +47,10 @@ function attitude_jacobian_from_configs(q)
         BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(chunk[4:7])])
             for chunk in Iterators.partition(q, 7)
     ]))
+end
+
+function φ(ang)
+	cat(1, ang, dims=1) ./ √(1+norm(ang)^2)
 end
 
 function quat_L(quat)
