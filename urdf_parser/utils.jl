@@ -1,4 +1,6 @@
 using Rotations, StaticArrays
+using LightXML
+using BlockDiagonals
 
 
 function hat(vector)
@@ -31,9 +33,20 @@ function orthogonal_complement(vec)
     qr([vec I]).Q[:,2:3]'
 end
 
-function attitude_jacobian(quat)
+function world_attitude_jacobian(quat)
     w, x, y, z = quat
-    [
+	0.5 * [
+        -x -y -z;
+         w  z -y;
+        -z  w  x;
+         y -x  w
+    ]
+end
+
+function body_attitude_jacobian(quat)
+    w, x, y, z = quat
+	# from planning with attitude paper
+    0.5 * [
         -x -y -z;
          w -z  y;
          z  w -x;
@@ -41,16 +54,27 @@ function attitude_jacobian(quat)
     ]
 end
 
-function attitude_jacobian_from_configs(q)
-    # println(size(q))
+function world_attitude_jacobian_from_configs(q)
     convert(Array{Float64}, BlockDiagonal([
-        BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(chunk[4:7])])
+        BlockDiagonal([Matrix(I, 3, 3), world_attitude_jacobian(chunk[4:7])])
+            for chunk in Iterators.partition(q, 7)
+    ]))
+end
+
+function body_attitude_jacobian_from_configs(q)
+    convert(Array{Float64}, BlockDiagonal([
+        BlockDiagonal([Matrix(I, 3, 3), body_attitude_jacobian(chunk[4:7])])
             for chunk in Iterators.partition(q, 7)
     ]))
 end
 
 function φ(ang)
 	cat(1, ang, dims=1) ./ √(1+norm(ang)^2)
+end
+
+function ϕ(quat)
+	w, x, y, z = quat
+	[x, y, z] ./ w
 end
 
 function quat_L(quat)

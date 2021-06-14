@@ -9,15 +9,21 @@ using ForwardDiff
 using Quaternions
 using Roots
 using MeshCat, GeometryBasics, CoordinateTransformations
+using Debugger
 include("utils.jl")
 include("newton.jl")
+include("newton2.jl")
 
 singleton_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/singleton.urdf"
+pendulum_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/pendulum.urdf"
 acrobot_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/acrobot.urdf"
+double_pendulum_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/double_pendulum.urdf"
 cassie_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/cassie-old.urdf"
 strandbeest_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/strandbeest.urdf"
 
-GRAVITATIONAL_ACCELERATION = 0#9.81
+GRAVITATIONAL_ACCELERATION = 9.8
+
+
 
 function add_loop_joints!(mechanism::RBD.Mechanism{T}, urdf::AbstractString) where T
     """
@@ -67,6 +73,7 @@ function constraint_vector(mechanism, state, body_order_dict)
         """ positional constraint
         we take the difference between the anchor positions in world frame
         """
+        # TODO get rid of rpy's for prismatic orientation constraint
         parent_rot = quat_to_rot(parent_state[4:7])
         parent_rpy = quat_to_rpy(parent_state[4:7])
         parent_pos = parent_state[1:3]
@@ -83,12 +90,12 @@ function constraint_vector(mechanism, state, body_order_dict)
         child_anc_wf = child_pos + child_rot * child_com_to_joint
         # println(parent_anc_wf, child_anc_wf)
         # dof pos and ori constraints
-        pos_diff = parent_anc_wf - child_anc_wf
+        pos_constraint = parent_anc_wf - child_anc_wf
         # println("parent: $(parent_pos)\n\t$(parent_rot)\n\t$(parent_com_to_joint)\n\t$(parent_com)")
         # println("child: $(child_pos),\n\t$(child_rot)\n\t$(child_com_to_joint)\n\t$(child_com)")
         # println()
         # TODO this prob needs to be x y z angles (not Euler but absolute)
-        ori_diff = parent_rpy - child_rpy
+        ori_constraint = parent_rpy - child_rpy
 
         """ joint-specific pos/ori constraints if not 3-dof constraints """
         if joint.joint_type isa RBD.Revolute
@@ -104,20 +111,26 @@ function constraint_vector(mechanism, state, body_order_dict)
             parent_axis_world_frame = parent_rot * parent_frame_axis
             child_axis_world_frame = child_rot * child_frame_axis
             parent_axis_world_perp = orthogonal_complement(parent_axis_world_frame)
-            ori_diff = parent_axis_world_perp * child_axis_world_frame
+            ori_constraint = parent_axis_world_perp * child_axis_world_frame
+
+            # SS: quaternion derivative rederive note
+            # parent_alt_anc_wf = parent_pos + parent_rot * (parent_com_to_joint + joint.joint_type.axis)
+            # child_alt_anc_wf = child_pos + child_rot * (child_com_to_joint + joint.joint_type.axis)
+            # ori_constraint_full = parent_alt_anc_wf - child_alt_anc_wf
+            # ori_constraint = orthogonal_complement(parent_rot * joint.joint_type.axis) * ori_constraint_full
         elseif joint.joint_type isa RBD.Fixed
         elseif joint.joint_type isa RBD.Prismatic
             parent_frame_axis = RBD.rotation(RBD.joint_to_predecessor(joint))' * joint.joint_type.axis
             parent_axis_world_frame = parent_rot * parent_frame_axis
             parent_axis_world_perp = orthogonal_complement(parent_axis_world_frame)
-            pos_diff = parent_axis_world_perp * pos_diff
+            pos_constraint = parent_axis_world_perp * pos_diff
         elseif joint.joint_type isa RBD.QuaternionFloating
             # no constraint
             continue
         else
             throw(DomainError(string(joint.joint_type), "unsupported joint type"))
         end
-        push!(C, cat(pos_diff, ori_diff, dims=1))
+        push!(C, cat(pos_constraint, ori_constraint, dims=1))
     end
     isempty(C) ? C : cat(C..., dims=1)  # handle no joints case
 end
@@ -165,10 +178,9 @@ function constraint_vector_jac(mechanism, state, body_order_dict)
         parent_anc_wf = parent_pos + parent_rot * parent_com_to_joint
         child_anc_wf = child_pos + child_rot * child_com_to_joint
         # dof pos and ori constraints
-        pos_diff_jac = cat(Matrix(I, 3, 3), -hat(parent_rot * parent_com_to_joint), -Matrix(I, 3, 3), hat(child_rot * child_com_to_joint), dims=2)
-        pos_diff = parent_anc_wf - child_anc_wf
-        # TODO ask zac if this is a good way to do ori constraint for fixed
-        ori_diff_jac = cat(zeros(3, 3), Matrix(I, 3, 3), zeros(3, 3), -Matrix(I, 3, 3), dims=2)
+        pos_constraint_jac = cat(Matrix(I, 3, 3), -hat(parent_rot * parent_com_to_joint), -Matrix(I, 3, 3), hat(child_rot * child_com_to_joint), dims=2)
+        pos_constraint = parent_anc_wf - child_anc_wf
+        ori_constraint_jac = cat(zeros(3, 3), Matrix(I, 3, 3), zeros(3, 3), -Matrix(I, 3, 3), dims=2)
 
         """ joint-specific pos/ori constraints if not 3-dof constraints """
         if joint.joint_type isa RBD.Revolute
@@ -184,7 +196,15 @@ function constraint_vector_jac(mechanism, state, body_order_dict)
             parent_axis_world_frame = parent_rot * parent_frame_axis
             child_axis_world_frame = child_rot * child_frame_axis
             parent_axis_world_perp = orthogonal_complement(parent_axis_world_frame)
-            ori_diff_jac = cat(zeros(2, 3), parent_axis_world_perp * hat(child_axis_world_frame), zeros(2, 3), -parent_axis_world_perp * hat(child_axis_world_frame), dims=2)
+            ori_constraint_jac = cat(zeros(2, 3), parent_axis_world_perp * hat(child_axis_world_frame), zeros(2, 3), -parent_axis_world_perp * hat(child_axis_world_frame), dims=2)
+
+            # SS: quaternion derivative rederive note
+            # parent_com_to_alt_anchor = parent_rot * (parent_com_to_joint + joint.joint_type.axis)
+            # child_com_to_alt_anchor = child_rot * (child_com_to_joint + joint.joint_type.axis)
+            # parent_alt_anc_wf = parent_pos + parent_com_to_alt_anchor
+            # child_alt_anc_wf = child_pos + child_com_to_alt_anchor
+            # oc = orthogonal_complement(parent_rot * joint.joint_type.axis)
+            # ori_constraint_jac = cat(oc, oc * (hat(parent_alt_anc_wf - child_alt_anc_wf) - hat(parent_com_to_alt_anchor)), -oc, oc * hat(child_com_to_alt_anchor), dims=2)
         elseif joint.joint_type isa RBD.Fixed
         elseif joint.joint_type isa RBD.Prismatic
             child_frame_axis = RBD.rotation(RBD.joint_to_successor(joint))' * joint.joint_type.axis
@@ -192,14 +212,14 @@ function constraint_vector_jac(mechanism, state, body_order_dict)
             parent_axis_world_frame = parent_rot * parent_frame_axis
             child_axis_world_frame = child_rot * child_frame_axis
             child_axis_world_perp = orthogonal_complement(child_axis_world_frame)
-            pos_diff_jac = cat(child_axis_world_perp, -child_axis_world_perp * hat(parent_rot * parent_com_to_joint), -child_axis_world_perp, child_axis_world_perp * hat(pos_diff + child_rot * child_com_to_joint))
+            pos_constraint_jac = cat(child_axis_world_perp, -child_axis_world_perp * hat(parent_rot * parent_com_to_joint), -child_axis_world_perp, child_axis_world_perp * hat(pos_diff + child_rot * child_com_to_joint))
         elseif joint.joint_type isa RBD.QuaternionFloating
             # no constraint
             continue
         else
             throw(DomainError(string(joint.joint_type), "unsupported joint type"))
         end
-        push!(C, make_jac(cat(pos_diff_jac, ori_diff_jac, dims=1), parent_body, child_body, body_order_dict))
+        push!(C, make_jac(cat(pos_constraint_jac, ori_constraint_jac, dims=1), parent_body, child_body, body_order_dict))
     end
     isempty(C) ? C : cat(C..., dims=1)  # handle no joints case
 end
@@ -233,9 +253,12 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
     end
 
     function constraint_jac(state)
-        # 5/1 TODO replace with closed form constraint jac to allow double forwarddiff
-        # ForwardDiff.jacobian(constraint, state) * attitude_jacobian_from_configs(state)
         constraint_vector_jac(mechanism, state, body_order_dict)
+    end
+
+    function constraint_jac_auto(state)
+        jac = ForwardDiff.jacobian(constraint, state)
+        jac * world_attitude_jacobian_from_configs(state)
     end
 
     function lagrangian(q1, q2, Δt)
@@ -268,7 +291,7 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
         vel = cat(diff..., dims=1) / Δt
         qavg = cat(avg..., dims=1)
         # calculate Lagrangian
-        T = vel'*M*vel
+        T = 0.5*vel'*M*vel
         U = sum(body.inertia.mass * gravity * (q1i[3] + q2i[3])/2
                 for (body, q1i, q2i) in zip(mass_bodies, q1_groups[mass_body_idxs], q2_groups[mass_body_idxs]))
         # C = constraint(q2)
@@ -276,13 +299,59 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
         Δt * (T - U)
     end
 
-    function get_condition(q1, q2, Δt; first_fixed=false)
-        M = mass_matrix
-        # chunk states into groups of 7 for each body
+    # function get_condition(q1, q2, Δt; first_fixed=false)
+    #     M = mass_matrix
+    #     # chunk states into groups of 7 for each body
+    #     q1_groups = collect(Iterators.partition(q1, 7))
+    #     q2_groups = collect(Iterators.partition(q2, 7))
+    #     function condition(q3_and_λ)
+    #         condition_arr = []
+    #         if first_fixed
+    #             # first body is fixed, don't optimize over its config
+    #             q3 = cat([0,0,0,1,0,0,0], q3_and_λ[1:length(q2)-7], dims=1)
+    #             λ = q3_and_λ[length(q2)-7+1:end]
+    #         else
+    #             q3 = q3_and_λ[1:length(q2)]
+    #             λ = q3_and_λ[length(q2)+1:end]
+    #         end
+    #         # chunk states into groups of 7 for each body
+    #         q3_groups = collect(Iterators.partition(q3, 7))
+    #         # get the velocity and average config per body
+    #         for (body, q1i, q2i, q3i) in zip(mass_bodies,
+    #                 q1_groups[mass_body_idxs], q2_groups[mass_body_idxs],
+    #                 q3_groups[mass_body_idxs])
+    #             Mi, Ji = body.inertia.mass, body.inertia.moment
+    #             pos1, quat1 = q1i[1:3], Quaternion(q1i[4:7]...)
+    #             pos2, quat2 = q2i[1:3], Quaternion(q2i[4:7]...)
+    #             pos3, quat3 = q3i[1:3], Quaternion(q3i[4:7]...)
+    #             v1 = (pos2 - pos1) / Δt
+    #             v2 = (pos3 - pos2) / Δt
+    #             ωq1 = 2 * conj(quat1) * quat2 / Δt
+    #             ωq2 = 2 * conj(quat2) * quat3 / Δt
+    #             ω1 = [ωq1.v1, ωq1.v2, ωq1.v3]
+    #             ω2 = [ωq2.v1, ωq2.v2, ωq2.v3]
+    #             # eq 26 from Jan paper
+    #             lin_cond = Mi * ((v2 - v1) / Δt + gravity * [0, 0, 1])
+    #             # eq 33
+    #             ang_cond = Ji * ω2 * √(4/Δt^2 - ω2'*ω2) + hat(ω2) * Ji * ω2 - Ji * ω1 * √(4/Δt^2 - ω1'*ω1) + hat(ω1) * Ji * ω1
+    #             push!(condition_arr, cat(lin_cond, ang_cond, dims=1))
+    #         end
+    #         condition_arr = cat(condition_arr..., dims=1)  # shape (6*num_bodies,)
+    #         # println(condition_arr)
+    #         # println("condition_arr shape $(size(condition_arr))\n λ shape $(size(λ))\n constraint_jac shape $(size(constraint_jac(q2)))")
+    #         condition_arr -= constraint_jac(q2)[:,7:end]' * λ  # TODO this is a hack to manually ignore the massless root body
+    #         cat(condition_arr, constraint(q3), dims=1)
+    #     end
+    #     condition
+    # end
+
+    function get_condition(q1, q2, Δt; first_fixed=true)
         q1_groups = collect(Iterators.partition(q1, 7))
         q2_groups = collect(Iterators.partition(q2, 7))
+        H = @SMatrix [0.0 0 0; 1 0 0; 0 1 0; 0 0 1]
+        S = @SVector[1, 0, 0, 0]
+        T = @SMatrix [1.0 0 0 0; 0 -1 0 0; 0 0 -1 0; 0 0 0 -1]
         function condition(q3_and_λ)
-            condition_arr = []
             if first_fixed
                 # first body is fixed, don't optimize over its config
                 q3 = cat([0,0,0,1,0,0,0], q3_and_λ[1:length(q2)-7], dims=1)
@@ -291,43 +360,47 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
                 q3 = q3_and_λ[1:length(q2)]
                 λ = q3_and_λ[length(q2)+1:end]
             end
-            # chunk states into groups of 7 for each body
             q3_groups = collect(Iterators.partition(q3, 7))
-            # get the velocity and average config per body
+            total_cond = []
             for (body, q1i, q2i, q3i) in zip(mass_bodies,
                     q1_groups[mass_body_idxs], q2_groups[mass_body_idxs],
                     q3_groups[mass_body_idxs])
                 Mi, Ji = body.inertia.mass, body.inertia.moment
-                pos1, quat1 = q1i[1:3], Quaternion(q1i[4:7]...)
-                pos2, quat2 = q2i[1:3], Quaternion(q2i[4:7]...)
-                pos3, quat3 = q3i[1:3], Quaternion(q3i[4:7]...)
+                pos1, quat1 = q1i[1:3], q1i[4:7]
+                pos2, quat2 = q2i[1:3], q2i[4:7]
+                pos3, quat3 = q3i[1:3], q3i[4:7]
                 v1 = (pos2 - pos1) / Δt
                 v2 = (pos3 - pos2) / Δt
-                ωq1 = 2 * conj(quat2) * quat1
-                ωq2 = 2 * conj(quat3) * quat2
-                ω1 = [ωq1.v1, ωq1.v2, ωq1.v3]
-                ω2 = [ωq2.v1, ωq2.v2, ωq2.v3]
-                # eq 26 from Jan paper
-                lin_cond = Mi * ((v2 - v1) / Δt + gravity * [0, 0, 1])
-                # eq 33
-                ang_cond = Ji * ω2 * √(4/Δt^2 - ω2'*ω2) + hat(ω2) * Ji * ω2 - Ji * ω1 * √(4/Δt^2 - ω1'*ω1) + hat(ω1) * Ji * ω1
-                push!(condition_arr, cat(lin_cond, ang_cond, dims=1))
+                lin_cond = M_ * (v2 - v1 + GRAVITATIONAL_ACCELERATION * Δt * [0, 0, 1])
+                quat_1_to_2 = quat_L(quat1)' * quat2
+                quat_2_to_3 = quat_L(quat2)' * quat3
+                ang_cond = -4/Δt * ϕ(quat_1_to_2)' * J_ * (H' / (S' * quat_1_to_2) - H' * quat_1_to_2 * S' / (S' * quat_1_to_2)^2) * quat_L(quat1)' -
+                            4/Δt * ϕ(quat_2_to_3)' * J_ * (H' / (S' * quat_2_to_3) - H' * quat_2_to_3 * S' / (S' * quat_2_to_3)^2) * quat_R(quat3) * T
+                total_cond_i = cat(lin_cond, body_attitude_jacobian(quat2)' * ang_cond', dims=1)
+                push!(total_cond, total_cond_i)
             end
-            condition_arr = cat(condition_arr..., dims=1)  # shape (6*num_bodies,)
-            # println(condition_arr)
-            # println("condition_arr shape $(size(condition_arr))\n λ shape $(size(λ))\n constraint_jac shape $(size(constraint_jac(q2)))")
-            condition_arr -= constraint_jac(q2)[:,7:end]' * λ  # TODO this is a hack to manually ignore the massless root body
-            cat(condition_arr, constraint(q3), dims=1)
+            total_cond = cat(total_cond..., dims=1)
+            total_cond -= Δt * constraint_jac(q2)[:,7:end]' * λ
+            # total_cond -= Δt * cconstraint_jac(q2[8:end])' * λ
+            diff1 = Δt * constraint_jac(q2)[:,7:end]' * λ
+            diff2 = Δt * cconstraint_jac(q2[8:end])' * λ
+            con1 = constraint(q3)
+            con2 = cconstraint(q3[8:end])
+            if (diff1≉diff2 || con1≉con2) && !(diff1[1] isa ForwardDiff.Dual)
+                println("DIFF")
+            end
+            # cat(total_cond, constraint(q3), dims=1)
+            cat(total_cond, cconstraint(q3[8:end]), dims=1)
         end
         condition
     end
 
-    mechanism, mass_matrix, constraint, constraint_jac, lagrangian, get_condition
+    mechanism, mass_matrix, constraint, constraint_jac, constraint_jac_auto, lagrangian, get_condition
 end
 
 function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
-    D1(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(first[4:7])]))' * ForwardDiff.gradient(first -> lagrangian(first, second, [], Δt), first)
-    D2(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), attitude_jacobian(second[4:7])]))' * ForwardDiff.gradient(second -> lagrangian(first, second, [], Δt), second)
+    D1(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), world_attitude_jacobian(first[4:7])]))' * ForwardDiff.gradient(first -> lagrangian(first, second, [], Δt), first)
+    D2(first, second) = convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), world_attitude_jacobian(second[4:7])]))' * ForwardDiff.gradient(second -> lagrangian(first, second, [], Δt), second)
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
     while t < time
@@ -342,15 +415,15 @@ function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
 end
 
 function simulate_constrained_system(q1, q2, Δt, lagrangian, constraint_fn, constraint_jac, num_constraints, time)
-    D1(first, second) = attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, Δt), first)
-    D2(first, second) = attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, Δt), second)
+    D1(first, second) = world_attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, Δt), first)
+    D2(first, second) = world_attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, Δt), second)
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
     # λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
     λ = zeros(num_constraints)
     while t < time
         # x contains q3 ∈ ℜˢ, λ₁ ∈ ℜᶜ, λ₂ ∈ ℜᶜ, where s = num_configs, c = num_constraints
-        objective(x) = cat(D2(q1, q2) + D1(q2, x[1:length(q2)]) + constraint_jac(x[1:length(q2)])' * x[length(q2)+1:end],
+        objective(x) = cat(D2(q1, q2) + D1(q2, x[1:length(q2)]) + Δt * constraint_jac(x[1:length(q2)])' * x[length(q2)+1:end],
                             constraint_fn(x[1:length(q2)]), dims=1)
         x0 = cat(q2, λ, dims=1)
         x = newton(objective, x0, quat_adjust=true, len_config=length(q2))
@@ -381,7 +454,7 @@ function simulate_constrained_system_v2(q1, q2, Δt, get_condition, num_constrai
     qs
 end
 
-function simulate_constrained_system_v3(q1, q2, Δt, get_condition, num_constraints, time)
+function simulate_constrained_system_v3(q1, q2, Δt, get_condition, constraint_fn, num_constraints, time)
     """ ignores fixed config of first body """
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
@@ -389,15 +462,17 @@ function simulate_constrained_system_v3(q1, q2, Δt, get_condition, num_constrai
     λ = zeros(num_constraints)
     while t < time
         x0 = cat(q2[8:end], λ, dims=1)  # ignore fixed config of first body
-        x = newton(get_condition(q1, q2, Δt, first_fixed=true), x0, quat_adjust=true, len_config=length(q2)-7)
+        x = newton2(get_condition(q1, q2, Δt, first_fixed=true), x0, len_config=length(q2)-7, ls_mult=0.4, merit_norm=2, num_iters=35)
         q3 = cat([0, 0, 0, 1, 0, 0, 0], x[1:length(q2)-7], dims=1)
         λ = x[length(q2)-7+1:end]  # TODO try with and without this line
         push!(qs, q3)
         q1, q2 = q2, q3
+        println("t=$(t), constr_norm=$(norm(constraint_fn(q3)))")
         t += Δt
     end
     qs
 end
+
 
 function get_test_state(mechanism::RBD.Mechanism; pos_offset=0)
     n = length(get_bodies(mechanism))
@@ -412,34 +487,116 @@ function get_test_state(mechanism::RBD.Mechanism; pos_offset=0)
 end
 
 
-mechanism, mass_matrix, constraint_fn, constraint_jac, lagrangian, get_condition = process_urdf(acrobot_path, floating=false)
+mechanism, mass_matrix, constraint_fn, constraint_jac, constraint_jac_auto, lagrangian, get_condition = process_urdf(double_pendulum_path, floating=false)
 num_constraints = length(constraint_fn(get_test_state(mechanism)))
+
 
 function get_acrobot_state(θ₁, θ₂)
     return [0, 0, 0, 1, 0, 0, 0,  # fixed
             -0.5sin(θ₁), 0.15, -0.5cos(θ₁), cos(0.5θ₁), 0, sin(0.5θ₁), 0,  # upper link
             -sin(θ₁)-sin(θ₁+θ₂), 0.25, -cos(θ₁)-cos(θ₁+θ₂), cos(0.5(θ₁+θ₂)), 0, sin(0.5(θ₁+θ₂)), 0]  # lower link
 end
+get_pendulum_state(θ) = get_acrobot_state(θ, 0)[1:14]
+
+function get_double_pendulum_state(θ₁, θ₂)
+    return [0, 0, 0, 1, 0, 0, 0,  # fixed
+            -sin(θ₁), 0, -cos(θ₁), cos(θ₁/2), 0, sin(θ₁/2), 0,  # upper link
+            -2sin(θ₁)-sin(θ₁+θ₂), 0.1, -2cos(θ₁)-cos(θ₁+θ₂), cos((θ₁+θ₂)/2), 0, sin((θ₁+θ₂)/2), 0]  # lower link
+end
+
 
 # for acrobot
-test_state0 = get_acrobot_state(0, 0)
-test_state1 = get_acrobot_state(0.05, 0.06)
+# test_state0 = get_acrobot_state(0, 0)
+# test_state1 = get_acrobot_state(0.02, 0.02)
+
+# for double pendulum
+test_state0 = get_double_pendulum_state(0, 0)
+test_state1 = get_double_pendulum_state(0.02, 0.02)
+test_state2 = get_double_pendulum_state(0.12, 0.33)
+
+constraint_jac(get_double_pendulum_state(0.2, 0.2))[:,13:18]
+
+constraint_jac(get_double_pendulum_state(0.22, 0.52))[:,7:12]
+constraint_jac_auto(get_double_pendulum_state(0.22, 0.52))[:,7:12]
+# for pendulum
+# test_state0 = get_pendulum_state(0)
+# test_state1 = get_pendulum_state(0.1)
+# test_state2 = get_pendulum_state(0.2)
 
 # for singleton
 # test_state0 = cat(zeros(3), [1, 0, 0, 0], dims=1)
 # test_state1 = cat(zeros(3), [0.999, 0.0, 0.0436, 0.0001], dims=1)
+
+# TESTING JACOBIANS
+constraint_jac(test_state0)[:,7:12]
+constraint_jac_auto(test_state0)[:,7:12]
+cf_0 = constraint_fn(test_state1)
+cj_0 = constraint_jac(test_state0)
+
+num_configs = length(test_state0) ÷ 7
+using Test
+constraint_fn(test_state1 + cat(1, zeros(13), dims=1))
+# pos test
+for i = 1:3
+    δ₁, δ₂ = zeros(6*num_configs), zeros(length(test_state0))
+    δ₁[i] = 1; δ₂[i] = 1
+    println(cf_0 + cj_0 * δ₁ - constraint_fn(test_state1 + δ₂))
+end
+
+function test_jac(state, constraint_fn, constraint_jac; ϵ=0.001)
+    ∂C_∂q = []  # finite diff jacobian
+    c₀ = constraint_fn(state)
+    for i = 1:length(state)
+        state_left, state_right = copy(state), copy(state)
+        state_left[i] -= ϵ/2
+        state_right[i] += ϵ/2
+        c_leftᵢ = constraint_fn(state_left)
+        c_rightᵢ = constraint_fn(state_right)
+        ∂C_∂qᵢ = (c_rightᵢ-c_leftᵢ)/ϵ
+        push!(∂C_∂q, ∂C_∂qᵢ)
+    end
+    ∂C_∂q = cat(∂C_∂q..., dims=2)
+    ∂C_∂q, (∂C_∂q * world_attitude_jacobian_from_configs(state))
+end
+
+jac_test_state = test_state1
+J_fd_fat, J_fd = test_jac(jac_test_state, constraint_fn, constraint_jac)
+J_fn = constraint_jac(jac_test_state)
+J_auto = constraint_jac_auto(jac_test_state)
+J_auto[1:5,7:12]
+# J_auto_fat[:,7]
+# J_fd_fat[1:5,8:end],J_auto_fat[1:5,8:end]
+# J_fd_fat[1:5,1:7]-J_auto_fat[1:5,1:7]
+# J_fd_fat[4:5,1:7]
+J_fd[6:10,7:12],J_fn[6:10,7:12],J_auto[6:10,7:12]
+
+J_fn ≈ J_fd, J_fn ≈ J_auto
+constraint_jac(test_state0)
 
 test_state0, test_state1
 get_test_state(mechanism)
 constraint_jac(test_state1)
 constraint_fn(test_state1)
 
-# println(ForwardDiff.jacobian(constraint_fn, test_state1) * attitude_jacobian_from_configs(test_state1))
-# println(constraint_jac(test_state1))
+# TESTING GET_CONDITION
+ts0, ts1 = test_state0, test_state1
+cond = get_condition(ts0, ts1, 0.1, first_fixed=true)
+D1(first, second) = world_attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, 0.1), first)
+D2(first, second) = world_attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, 0.1), second)
+objective(x) = cat(D2(ts0, ts1) + D1(ts1, x[1:length(ts1)]) + constraint_jac_auto(x[1:length(ts1)])' * x[length(ts1)+1:end],
+                    constraint_fn(x[1:length(ts1)]), dims=1)
+cond(cat(test_state2[8:end], zeros(5), dims=1))
+objective(cat(test_state0, zeros(5), dims=1))
+
+
+
+
+# SIMULATION
 
 # qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 3)
-qs = simulate_constrained_system_v3(test_state0, test_state1, 0.1, get_condition, num_constraints, 0.3)
+qs = simulate_constrained_system_v3(test_state0, test_state1, 0.03, get_condition, constraint_fn, num_constraints, 0.5)
 # qs = simulate_constrained_system(test_state0, test_state1, 0.1, lagrangian, constraint_fn, constraint_jac, num_constraints, 10)
+qs[3]
 
 [norm(constraint_fn(q)) for q in qs]
 constraint_fn(qs[end])

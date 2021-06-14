@@ -1,7 +1,6 @@
+using ForwardDiff
 include("utils.jl")
-function φ(ang)
-	cat(1, ang, dims=1) ./ √(1+norm(ang)^2)
-end
+
 
 """
 	Newton; from https://github.com/thowell/motion_planning/blob/b84f6c729bd7a6e24e407ed27b6bf1a77becefe6/src/solvers/newton.jl
@@ -18,15 +17,21 @@ function newton(res::Function, x;
 
     iter = 0
 
-	num_iters = 20
+	num_iters = 10
 	num_iters_ls = 25
 
     while norm(r, 2) > tol_r && iter < num_iters
         ∇r = ForwardDiff.jacobian(res, y)
+		# println("\n∇r ($(size(∇r))) (orig)")
 		if quat_adjust
-			∇r = cat(∇r[:, 1:len_config] * attitude_jacobian_from_configs(y[1:len_config]),
+			∇r = cat(∇r[:, 1:len_config] * world_attitude_jacobian_from_configs(y[1:len_config]),
 						∇r[:,len_config+1:end], dims=2)
+			# println("$∇r: (∇r)")
 		end
+		# println("\n∇r ($(size(∇r))):")
+		# for i = 1:size(∇r, 1)
+		# 	println("$(∇r[i, :])")
+		# end
 		try
         	Δy = -1.0 * ∇r \ r
 			# println("Δy: $(size(Δy))")
@@ -56,8 +61,9 @@ function newton(res::Function, x;
 
 				yh_arr = []
 				for (yi, dyi) in zip(Iterators.partition(y[1:len_config], 7), Iterators.partition(Δy[1:6*num_configs], 6))
-					unnorm = quat_L(yi[4:7])*φ(α*dyi[4:6])
-					push!(yh_arr, cat(yi[1:3] + α*dyi[1:3], unnorm/norm(unnorm), dims=1))
+					pos = yi[1:3] + α*dyi[1:3]
+					rot = quat_L(yi[4:7])*φ(α*dyi[4:6])
+					push!(yh_arr, cat(pos, rot, dims=1))
 				end
 				ŷ = cat(yh_arr..., y[len_config+1:end] + α * Δy[6*num_configs+1:end], dims=1)
 
@@ -77,8 +83,9 @@ function newton(res::Function, x;
                 α *= 0.5
 				iter_ls += 1
             end
-
-			iter_ls == num_iters_ls && (@warn "line search failed")
+			if iter_ls == num_iters_ls
+				@warn "line search failed"
+			end
         end
 
         iter += 1
