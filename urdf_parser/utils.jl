@@ -77,7 +77,7 @@ function ϕ(quat)
 	[x, y, z] ./ w
 end
 
-function quat_L(quat)
+function L(quat)
     w, x, y, z = quat
     [
         w  -x  -y  -z;
@@ -87,7 +87,7 @@ function quat_L(quat)
     ]
 end
 
-function quat_R(quat)
+function R(quat)
     w, x, y, z = quat
     [
         w  -x  -y  -z;
@@ -96,6 +96,10 @@ function quat_R(quat)
         z   y  -x   w;
     ]
 end
+
+H = @SMatrix [0.0 0 0; 1 0 0; 0 1 0; 0 0 1]
+S = @SVector[1, 0, 0, 0]
+T = @SMatrix [1.0 0 0 0; 0 -1 0 0; 0 0 -1 0; 0 0 0 -1]
 
 function quat_to_rot(quat)
     @assert length(quat) == 4

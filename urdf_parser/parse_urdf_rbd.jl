@@ -7,8 +7,9 @@ using LightXML
 using StaticArrays
 using ForwardDiff
 using Quaternions
-using Roots
-using MeshCat, GeometryBasics, CoordinateTransformations
+using Symbolics
+# using Roots
+# using MeshCat, GeometryBasics, CoordinateTransformations
 using Debugger
 include("utils.jl")
 include("newton.jl")
@@ -371,26 +372,26 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
                 pos3, quat3 = q3i[1:3], q3i[4:7]
                 v1 = (pos2 - pos1) / Δt
                 v2 = (pos3 - pos2) / Δt
-                lin_cond = M_ * (v2 - v1 + GRAVITATIONAL_ACCELERATION * Δt * [0, 0, 1])
+                lin_cond = Mi * (v2 - v1 + GRAVITATIONAL_ACCELERATION * Δt * [0, 0, 1])
                 quat_1_to_2 = quat_L(quat1)' * quat2
                 quat_2_to_3 = quat_L(quat2)' * quat3
-                ang_cond = -4/Δt * ϕ(quat_1_to_2)' * J_ * (H' / (S' * quat_1_to_2) - H' * quat_1_to_2 * S' / (S' * quat_1_to_2)^2) * quat_L(quat1)' -
-                            4/Δt * ϕ(quat_2_to_3)' * J_ * (H' / (S' * quat_2_to_3) - H' * quat_2_to_3 * S' / (S' * quat_2_to_3)^2) * quat_R(quat3) * T
+                ang_cond = -4/Δt * ϕ(quat_1_to_2)' * Ji * (H' / (S' * quat_1_to_2) - H' * quat_1_to_2 * S' / (S' * quat_1_to_2)^2) * quat_L(quat1)' -
+                            4/Δt * ϕ(quat_2_to_3)' * Ji * (H' / (S' * quat_2_to_3) - H' * quat_2_to_3 * S' / (S' * quat_2_to_3)^2) * quat_R(quat3) * T
                 total_cond_i = cat(lin_cond, body_attitude_jacobian(quat2)' * ang_cond', dims=1)
                 push!(total_cond, total_cond_i)
             end
             total_cond = cat(total_cond..., dims=1)
             total_cond -= Δt * constraint_jac(q2)[:,7:end]' * λ
             # total_cond -= Δt * cconstraint_jac(q2[8:end])' * λ
-            diff1 = Δt * constraint_jac(q2)[:,7:end]' * λ
-            diff2 = Δt * cconstraint_jac(q2[8:end])' * λ
-            con1 = constraint(q3)
-            con2 = cconstraint(q3[8:end])
-            if (diff1≉diff2 || con1≉con2) && !(diff1[1] isa ForwardDiff.Dual)
-                println("DIFF")
-            end
-            # cat(total_cond, constraint(q3), dims=1)
-            cat(total_cond, cconstraint(q3[8:end]), dims=1)
+            # diff1 = Δt * constraint_jac(q2)[:,7:end]' * λ
+            # diff2 = Δt * cconstraint_jac(q2[8:end])' * λ
+            # con1 = constraint(q3)
+            # con2 = cconstraint(q3[8:end])
+            # if (diff1≉diff2 || con1≉con2) && !(diff1[1] isa ForwardDiff.Dual)
+            #     println("DIFF")
+            # end
+            cat(total_cond, constraint(q3), dims=1)
+            # cat(total_cond, cconstraint(q3[8:end]), dims=1)
         end
         condition
     end
@@ -468,6 +469,42 @@ function simulate_constrained_system_v3(q1, q2, Δt, get_condition, constraint_f
         push!(qs, q3)
         q1, q2 = q2, q3
         println("t=$(t), constr_norm=$(norm(constraint_fn(q3)))")
+        t += Δt
+    end
+    qs
+end
+
+function simulate_constrained_system_v4(q1, q2, Δt, get_condition, constraint_fn, num_constraints, time)
+    """ uses Symbolics in place of ForwardDiff """
+    qs = [q1, q2]
+    t = 2 * Δt  # first two configs given
+    λ = zeros(num_constraints)
+    while t < time
+        x0 = cat(q2[8:end], λ, dims=1)  # ignore fixed config of first body
+        cond_fn = get_condition(q1, q2, Δt, first_fixed=true)
+
+        # symbolics
+        @variables q3_and_λ[1:length(q2)-7+num_constraints]
+        cond = cond_fn(q3_and_λ)
+        cond_exp = Symbolics.build_function(cond, q3_and_λ, expression=Val{false})
+        cond_func = eval(cond_exp[1])
+        cond_jac = Symbolics.jacobian(cond, q3_and_λ, simplify=true)
+        cond_jac_exp = Symbolics.build_function(cond_jac, q3_and_λ, expression=Val{false})
+        cond_jac_fn = eval(cond_jac_exp[1])
+
+        println(cond_jac_fn(x0))
+        println()
+        println(Symbolics.value.(substitute(expand_derivatives(cond_jac_fn(x0)), Dict(q3_and_λ => x0))))
+        x = newton2_with_jac(cond_fn, x -> substitute(cond_jac_fn(x), Dict(q3_and_λ => x)),
+                                x0, len_config=length(q2)-7, tol=1e-6, merit_norm=2)
+        # x = newton2_with_jac(cond_fn, x -> Base.invokelatest(cond_jac_fn, x), x0, len_config=length(q2), tol=1e-6, merit_norm=2)
+        # x = Base.invokelatest(newton2_with_jac, cond_fn, x -> substitute(cond_jac_fn(x), Dict(q3_and_λ => x)),
+        #                         x0, len_config=length(q2)-7, tol=1e-6, merit_norm=2)
+        q3 = cat([0, 0, 0, 1, 0, 0, 0], x[1:length(q2)-7], dims=1)
+        λ = x[length(q2)-7+1:end]  # TODO try with and without this line
+        push!(qs, q3)
+        q1, q2 = q2, q3
+        println("t=$(t), constr_norm=$(norm(constraint(q3)))")
         t += Δt
     end
     qs
@@ -594,7 +631,8 @@ objective(cat(test_state0, zeros(5), dims=1))
 # SIMULATION
 
 # qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 3)
-qs = simulate_constrained_system_v3(test_state0, test_state1, 0.03, get_condition, constraint_fn, num_constraints, 0.5)
+qs = simulate_constrained_system_v3(test_state0, test_state1, 0.01, get_condition, constraint_fn, num_constraints, 0.5)
+qs_sym = simulate_constrained_system_v4(test_state0, test_state1, 0.01, get_condition, constraint_fn, num_constraints, 0.5)
 # qs = simulate_constrained_system(test_state0, test_state1, 0.1, lagrangian, constraint_fn, constraint_jac, num_constraints, 10)
 qs[3]
 

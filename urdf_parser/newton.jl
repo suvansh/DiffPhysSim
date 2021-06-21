@@ -46,7 +46,7 @@ function newton(res::Function, x;
         while α > 1.0e-8 && iter_ls < num_iters_ls
             if quat_adjust
 				# ŷ = cat([
-				# 		cat(y_i[1:3] + α * Δy_i[1:3], quat_L(y_i[4:7]) * φ(α * Δy_i[4:6]), dims=1)
+				# 		cat(y_i[1:3] + α * Δy_i[1:3], L(y_i[4:7]) * φ(α * Δy_i[4:6]), dims=1)
 				# 			for (y_i, Δy_i) in zip(Iterators.partition(y[1:len_config], 7),
 				# 								Iterators.partition(Δy[1:6*num_configs], 6))
 				# 		]...,
@@ -62,12 +62,12 @@ function newton(res::Function, x;
 				yh_arr = []
 				for (yi, dyi) in zip(Iterators.partition(y[1:len_config], 7), Iterators.partition(Δy[1:6*num_configs], 6))
 					pos = yi[1:3] + α*dyi[1:3]
-					rot = quat_L(yi[4:7])*φ(α*dyi[4:6])
+					rot = L(yi[4:7])*φ(α*dyi[4:6])
 					push!(yh_arr, cat(pos, rot, dims=1))
 				end
 				ŷ = cat(yh_arr..., y[len_config+1:end] + α * Δy[6*num_configs+1:end], dims=1)
 
-				# ŷ = cat(y[1:3] + α * Δy[1:3], quat_L(y[4:7]) * φ(α * Δy[4:6]), dims=1)
+				# ŷ = cat(y[1:3] + α * Δy[1:3], L(y[4:7]) * φ(α * Δy[4:6]), dims=1)
 				# println("ŷ: $(size(ŷ))")
 				# ŷ = y + α * convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(y[4:7])])) * Δy
 			else
