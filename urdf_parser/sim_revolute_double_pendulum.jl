@@ -77,9 +77,6 @@ end
 function cget_condition(q1, q2, Δt)
     q1_groups = collect(Iterators.partition(q1, 7))
     q2_groups = collect(Iterators.partition(q2, 7))
-    H = @SMatrix [0.0 0 0; 1 0 0; 0 1 0; 0 0 1]
-    S = @SVector[1, 0, 0, 0]
-    T = @SMatrix [1.0 0 0 0; 0 -1 0 0; 0 0 -1 0; 0 0 0 -1]
     function condition(q3_and_λ)
         q3, λ = q3_and_λ[1:length(q2)], q3_and_λ[length(q2)+1:end]
         q3_groups = collect(Iterators.partition(q3, 7))
@@ -91,10 +88,11 @@ function cget_condition(q1, q2, Δt)
             v1 = (pos2 - pos1) / Δt
             v2 = (pos3 - pos2) / Δt
             lin_cond = M_ * (v2 - v1 + GRAVITY * Δt * [0, 0, 1])
-            quat_1_to_2 = quat_L(quat1)' * quat2
-            quat_2_to_3 = quat_L(quat2)' * quat3
-            ang_cond = -4/Δt * ϕ(quat_1_to_2)' * J_ * (H' / (S' * quat_1_to_2) - H' * quat_1_to_2 * S' / (S' * quat_1_to_2)^2) * quat_L(quat1)' -
-                        4/Δt * ϕ(quat_2_to_3)' * J_ * (H' / (S' * quat_2_to_3) - H' * quat_2_to_3 * S' / (S' * quat_2_to_3)^2) * quat_R(quat3) * T
+            quat_1_to_2 = L(quat1)' * quat2
+            quat_2_to_3 = L(quat2)' * quat3
+            # ang_cond = -4/Δt * ϕ(quat_1_to_2)' * J_ * (H' / (S' * quat_1_to_2) - H' * quat_1_to_2 * S' / (S' * quat_1_to_2)^2) * L(quat1)' -
+            #             4/Δt * ϕ(quat_2_to_3)' * J_ * (H' / (S' * quat_2_to_3) - H' * quat_2_to_3 * S' / (S' * quat_2_to_3)^2) * R(quat3) * T
+            ang_cond = (-4/Δt * L(quat1)' * H * J_ * H' * L(quat1)' * quat2 - 4/Δt * T * R(quat3)' * H * J_ * H' * R(quat3) * T * quat2)'
             total_cond_i = cat(lin_cond, body_attitude_jacobian(quat2)' * ang_cond', dims=1)
             push!(total_cond, total_cond_i)
         end
@@ -103,6 +101,34 @@ function cget_condition(q1, q2, Δt)
         cat(total_cond, cconstraint(q3), dims=1)
     end
     condition
+end
+
+function cget_condition_jacobian(q1, q2, Δt)
+    q1_groups = collect(Iterators.partition(q1, 7))
+    q2_groups = collect(Iterators.partition(q2, 7))
+    function condition_jacobian(q3_and_λ)
+        q3, λ = q3_and_λ[1:length(q2)], q3_and_λ[length(q2)+1:end]
+        num_constraints = length(λ)
+        q3_groups = collect(Iterators.partition(q3, 7))
+        ∂cond_∂config_arr = []
+        for (q1i, q2i, q3i) in zip(q1_groups, q2_groups, q3_groups)
+            num_constraints = length(λ)
+            pos1, quat1 = q1i[1:3], q1i[4:7]
+            pos2, quat2 = q2i[1:3], q2i[4:7]
+            pos3, quat3 = q3i[1:3], q3i[4:7]
+            ∂cond_∂pos = -cat(-M_/Δt, zeros(3, 4), dims=2)
+            term = 4/Δt * (T*L(H*J_*H'*R(quat3)*T*quat2)*T + T*R(quat3)'*H*J_*H'*L(quat2)')
+            ∂cond_∂quat = -cat(zeros(3, 3), body_attitude_jacobian(quat2)' * term, dims=2)
+            ∂cond_∂config_i = cat(∂cond_∂pos, ∂cond_∂quat, dims=1)
+            push!(∂cond_∂config_arr, ∂cond_∂config_i)
+        end
+        @bp
+        ∂cond_∂config = convert(Array{Float64}, BlockDiagonal(convert(Array{Array{Float64, 2}}, ∂cond_∂config_arr)))
+        jac_top = cat(∂cond_∂config * world_attitude_jacobian_from_configs(q3), -Δt * cconstraint_jac(q2)', dims=2)
+        jac_constr = cat(cconstraint_jac(q3), zeros(num_constraints, num_constraints), dims=2)
+        cat(jac_top, jac_constr, dims=1)
+    end
+    condition_jacobian
 end
 
 function csim(q1, q2, Δt, time)
@@ -157,6 +183,28 @@ function csim_sym(q1, q2, Δt, time)
     qs
 end
 
+function csim_man(q1, q2, Δt, time)
+    """ uses manual jacobian of condition """
+    qs = [q1, q2]
+    t = 2 * Δt  # first two configs given
+    num_constraints = 10  # 5 constraints per revolute joint
+    λ = zeros(num_constraints)
+    while t < time
+        x0 = cat(q2, λ, dims=1)
+        cond_fn = cget_condition(q1, q2, Δt)
+        cond_jac_fn = cget_condition_jacobian(q1, q2, Δt)
+
+        x = newton2_with_jac(cond_fn, cond_jac_fn, x0, apply_attitude=false, len_config=length(q2), merit_norm=2)
+        q3 = x[1:length(q2)]
+        λ = x[length(q2)+1:end]  # TODO try with and without this line
+        push!(qs, q3)
+        q1, q2 = q2, q3
+        println("t=$(t), constr_norm=$(norm(constraint(q3)))")
+        t += Δt
+    end
+    qs
+end
+
 
 q1 = cget_double_pendulum_state(0, 0)
 q2 = cget_double_pendulum_state(0.02, 0.02)
@@ -164,8 +212,12 @@ q3 = cget_double_pendulum_state(0.5, 0.16)
 
 
 cqs = csim(q1, q2, 0.03, 1)
-cqs_sym = csim_sym(q1, q2, 0.03, 1)
-cqs[3]
+# cqs_sym = csim_sym(q1, q2, 0.03, 1)
+cqs_man = csim_man(q1, q2, 0.01, 1)
+
+# check the configs' indices to sanity check.
+cqs_man_stack = cat(cqs_man..., dims=2)
+println(cqs_man_stack[6, :])
 
 # comparing urdf to non urdf versions
 test_idx = 8

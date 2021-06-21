@@ -89,12 +89,11 @@ function get_condition_jacobian(q1, q2, Δt)
         pos1, quat1 = q1[1:3], q1[4:7]
         pos2, quat2 = q2[1:3], q2[4:7]
         pos3, quat3 = q3[1:3], q3[4:7]
-        cj = constraint_jac(q2)
         ∂cond_∂pos = -cat(-M_/Δt, zeros(3, 4), dims=2)
         term = 4/Δt * (T*L(H*J_*H'*R(quat3)*T*quat2)*T + T*R(quat3)'*H*J_*H'*L(quat2)')
         ∂cond_∂quat = -cat(zeros(3, 3), body_attitude_jacobian(quat2)' * term, dims=2)
         ∂cond_∂config = cat(∂cond_∂pos, ∂cond_∂quat, dims=1)
-        jac_top = cat(∂cond_∂config * world_attitude_jacobian_from_configs(q3), -Δt * cj', dims=2)
+        jac_top = cat(∂cond_∂config * world_attitude_jacobian_from_configs(q3), -Δt * constraint_jac(q2)', dims=2)
         jac_constr = cat(constraint_jac(q3), zeros(num_constraints, num_constraints), dims=2)
         cat(jac_top, jac_constr, dims=1)
     end
