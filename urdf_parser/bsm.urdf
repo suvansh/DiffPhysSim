@@ -1,0 +1,819 @@
+<?xml version="1.0"?>
+<!-- TODO the masses/moments of inertia are all wrong -->
+
+<robot name="BranchScissorMechanism">
+	<link name="base_link">
+    <visual>
+      <geometry>
+         <box size=".005 .005 .005" />
+      </geometry>
+      <material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<!-- LINKS -->
+
+	<!-- BSM 1 -->
+	<link name="arm1-1-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-1-2">
+    <inertial>
+			<origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand1-1">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-2-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-2-2">
+    <inertial>
+			<origin xyz="-0.031545 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand1-2">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-3-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-3-2">
+    <inertial>
+			<origin xyz="-0.031545 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand1-3">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-4-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm1-4-2">
+    <inertial>
+			<origin xyz="-0.031545 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand1-4">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="four1-1">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="four1-2">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="purple"/>
+    </visual>
+  </link>
+
+	<link name="four1-3">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+	<link name="four1-4">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+
+	<!-- BSM 2 -->
+	<link name="arm2-1-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-1-2">
+    <inertial>
+			<origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand2-1">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-2-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-2-2">
+    <inertial>
+			<origin xyz="-0.031545 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand2-2">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-3-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-3-2">
+    <inertial>
+			<origin xyz="-0.031545 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand2-3">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-4-1">
+    <inertial>
+			<origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.031545 0 -0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="red">
+	       <color rgba="1 0 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm2-4-2">
+    <inertial>
+			<origin xyz="-0.031545 0 0.025358" rpy="0 -0.8937 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.03154525 0 0.025358" rpy="0 -0.8937 0" />
+      <geometry>
+         <cylinder length="0.080948" radius="0.011901" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="hand2-4">
+    <inertial>
+			<origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.017 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.034" radius="0.016" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="four2-1">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="four2-2">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+	<link name="four2-3">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+	<link name="four2-4">
+    <inertial>
+			<origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.083" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0085 0" rpy="1.5708 0 0" />
+      <geometry>
+         <cylinder length="0.017" radius="0.016" />
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+
+
+	<!-- JOINTS -->
+
+	<joint name="world" type="floating">
+    <parent link="base_link" />
+    <child link="four1-1" />
+		<origin xyz="0.036124 0.003829 -0.185724" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<!-- BSM 1 to 2 -->
+	<joint name="bsm1-to-bsm2" type="floating">
+		<parent link="four1-1" />
+		<child link="four2-1" />
+		<origin xyz="0 0 0.101432" rpy="0 0 0" />
+		<dynamics damping="0.1" />
+	</joint>
+
+	<loop_joint name="hand1-1-to-arm2-3-1" type="continuous">
+		<!-- TODO confirm axis should be in ref frame of link1 -->
+		<!-- TODO confirm how to use rpy and xyz below to specify where the joint is in relation to the links -->
+    <axis xyz="0 1 0"/>
+    <link1 link="hand1-1" rpy="0 0 0" xyz="0 -0.034 0"/>
+    <link2 link="arm2-3-1" rpy="0 0 0" xyz="0 0 0"/>
+  </loop_joint>
+
+	<loop_joint name="hand1-2-to-arm2-4-1" type="continuous">
+    <axis xyz="0 1 0"/>
+    <link1 link="hand1-2" rpy="0 0 0" xyz="0 -0.034 0"/>
+    <link2 link="arm2-4-1" rpy="0 0 0" xyz="0 0 0"/>
+  </loop_joint>
+
+	<loop_joint name="hand1-3-to-arm2-1-1" type="continuous">
+    <axis xyz="0 1 0"/>
+    <link1 link="hand1-3" rpy="0 0 0" xyz="0 -0.034 0"/>
+    <link2 link="arm2-1-1" rpy="0 0 0" xyz="0 0 0"/>
+  </loop_joint>
+
+	<loop_joint name="hand1-4-to-arm2-2-1" type="continuous">
+    <axis xyz="0 1 0"/>
+    <link1 link="hand1-4" rpy="0 0 0" xyz="0 -0.034 0"/>
+    <link2 link="arm2-2-1" rpy="0 0 0" xyz="0 0 0"/>
+  </loop_joint>
+
+	<!-- BSM 1 -->
+	<joint name="arm1-1" type="continuous">
+    <parent link="arm1-1-1" />
+    <child link="arm1-1-2" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand1-1" type="fixed">
+		<parent link="arm1-1-2" />
+		<child link="hand1-1" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="arm1-2" type="continuous">
+    <parent link="arm1-2-1" />
+    <child link="arm1-2-2" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand1-2" type="fixed">
+		<parent link="arm1-2-2" />
+		<child link="hand1-2" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="arm1-3" type="continuous">
+    <parent link="arm1-3-1" />
+    <child link="arm1-3-2" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand1-3" type="fixed">
+		<parent link="arm1-3-2" />
+		<child link="hand1-3" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="arm1-4" type="continuous">
+    <parent link="arm1-4-1" />
+    <child link="arm1-4-2" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand1-4" type="fixed">
+		<parent link="arm1-4-2" />
+		<child link="hand1-4" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="four1-1-to-arm1-1-1" type="fixed">
+    <parent link="four1-1" />
+    <child link="arm1-1-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four1-2-to-arm1-2-1" type="fixed">
+    <parent link="four1-2" />
+    <child link="arm1-2-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four1-3-to-arm1-3-1" type="fixed">
+    <parent link="four1-3" />
+    <child link="arm1-3-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four1-4-to-arm1-4-1" type="fixed">
+    <parent link="four1-4" />
+    <child link="arm1-4-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four1-1-to-four1-2" type="fixed">
+    <parent link="four1-1" />
+    <child link="four1-2" />
+		<origin xyz="-0.017 -0.017 0" rpy="0 0 1.5708" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four1-1-to-four1-3" type="fixed">
+    <parent link="four1-1" />
+    <child link="four1-3" />
+		<origin xyz="0 -0.034 0" rpy="0 0 3.1416" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four1-1-to-four1-4" type="fixed">
+    <parent link="four1-1" />
+    <child link="four1-4" />
+		<origin xyz="0.017 -0.017 0" rpy="0 0 -1.5708" />
+    <dynamics damping="0.1" />
+  </joint>
+
+
+	<!-- BSM 2 -->
+	<joint name="arm2-1" type="continuous">
+    <parent link="arm2-1-1" />
+    <child link="arm2-1-2" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand2-1" type="fixed">
+		<parent link="arm2-1-2" />
+		<child link="hand2-1" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="arm2-2" type="continuous">
+    <parent link="arm2-2-1" />
+    <child link="arm2-2-2" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand2-2" type="fixed">
+		<parent link="arm2-2-2" />
+		<child link="hand2-2" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="arm2-3" type="continuous">
+    <parent link="arm2-3-1" />
+    <child link="arm2-3-2" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand2-3" type="fixed">
+		<parent link="arm2-3-2" />
+		<child link="hand2-3" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="arm2-4" type="continuous">
+    <parent link="arm2-4-1" />
+    <child link="arm2-4-2" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="hand2-4" type="fixed">
+		<parent link="arm2-4-2" />
+		<child link="hand2-4" />
+		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0"/>
+		<dynamics damping="0.1" />
+	</joint>
+
+	<joint name="four2-1-to-arm2-1-1" type="fixed">
+    <parent link="four2-1" />
+    <child link="arm2-1-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four2-2-to-arm2-2-1" type="fixed">
+    <parent link="four2-2" />
+    <child link="arm2-2-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four2-3-to-arm2-3-1" type="fixed">
+    <parent link="four2-3" />
+    <child link="arm2-3-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four2-4-to-arm2-4-1" type="fixed">
+    <parent link="four2-4" />
+    <child link="arm2-4-1" />
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four2-1-to-four2-2" type="fixed">
+    <parent link="four2-1" />
+    <child link="four2-2" />
+		<origin xyz="-0.017 -0.017 0" rpy="0 0 1.5708" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four2-1-to-four2-3" type="fixed">
+    <parent link="four2-1" />
+    <child link="four2-3" />
+		<origin xyz="0 -0.034 0" rpy="0 0 3.1416" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="four2-1-to-four2-4" type="fixed">
+    <parent link="four2-1" />
+    <child link="four2-4" />
+		<origin xyz="0.017 -0.017 0" rpy="0 0 -1.5708" />
+    <dynamics damping="0.1" />
+  </joint>
+
+</robot>
