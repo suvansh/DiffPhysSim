@@ -53,6 +53,28 @@ function cconstraint_jac_auto(q)
     ForwardDiff.jacobian(cconstraint, q) * world_attitude_jacobian_from_configs(q)
 end
 
+# function cconstraint_jac(q)
+#     pos1, quat1 = q[1:3], q[4:7]
+#     pos2, quat2 = q[8:10], q[11:14]
+#     rot1 = quat_to_rot(quat1)
+#     rot2 = quat_to_rot(quat2)
+#
+#     pos_jac_1 = cat(-Matrix(I, 3, 3), hat(rot1 * com_1_to_anchor_1), zeros(3, 6), dims=2)
+#     pos_jac_2 = cat(Matrix(I, 3, 3), -hat(rot1 * com_1_to_anchor_2), -Matrix(I, 3, 3), hat(rot2 * com_2_to_anchor_2), dims=2)
+#
+#     world_axis_1_perp = orthogonal_complement(world_axis_1)
+#     axis_1_body_1_world_frame = rot1 * axis_1_body_1
+#     ori_jac_1 = cat(zeros(2, 3), -world_axis_1_perp * hat(axis_1_body_1_world_frame), zeros(2, 6), dims=2)
+#
+#     axis_2_body_1_world_frame = rot1 * axis_2_body_1
+#     axis_2_body_1_perp = orthogonal_complement(axis_2_body_1_world_frame)
+#     axis_2_body_2_world_frame = rot2 * axis_2_body_2
+#     ori_jac_2 = cat(zeros(2, 3), axis_2_body_1_perp * hat(axis_2_body_2_world_frame), zeros(2, 3), -axis_2_body_1_perp * hat(axis_2_body_2_world_frame), dims=2)
+#
+#     cat(pos_jac_1, ori_jac_1, pos_jac_2, ori_jac_2, dims=1)
+# end
+
+
 function cconstraint_jac(q)
     pos1, quat1 = q[1:3], q[4:7]
     pos2, quat2 = q[8:10], q[11:14]
@@ -73,6 +95,7 @@ function cconstraint_jac(q)
 
     cat(pos_jac_1, ori_jac_1, pos_jac_2, ori_jac_2, dims=1)
 end
+
 
 function cget_condition(q1, q2, Δt)
     q1_groups = collect(Iterators.partition(q1, 7))
@@ -122,11 +145,11 @@ function cget_condition_jacobian(q1, q2, Δt)
             ∂cond_∂config_i = cat(∂cond_∂pos, ∂cond_∂quat, dims=1)
             push!(∂cond_∂config_arr, ∂cond_∂config_i)
         end
-        @bp
         ∂cond_∂config = convert(Array{Float64}, BlockDiagonal(convert(Array{Array{Float64, 2}}, ∂cond_∂config_arr)))
         jac_top = cat(∂cond_∂config * world_attitude_jacobian_from_configs(q3), -Δt * cconstraint_jac(q2)', dims=2)
         jac_constr = cat(cconstraint_jac(q3), zeros(num_constraints, num_constraints), dims=2)
-        cat(jac_top, jac_constr, dims=1)
+        jac = cat(jac_top, jac_constr, dims=1)
+        jac
     end
     condition_jacobian
 end
@@ -138,46 +161,14 @@ function csim(q1, q2, Δt, time)
     λ = zeros(num_constraints)
     while t < time
         x0 = cat(q2, λ, dims=1)
-        x = newton2(cget_condition(q1, q2, Δt), x0, len_config=length(q2), ls_mult=0.4, merit_norm=2, num_iters=35)
+        cond_fn = cget_condition(q1, q2, Δt)
+        cond_jac_fn = cget_condition_jacobian(q1, q2, Δt)
+        x = newton2(cond_fn, cond_jac_fn, x0, len_config=length(q2), tol=1e-10, ls_mult=0.4, merit_norm=2, num_iters=40, print_jac=false)#t≈0.1)
         q3 = x[1:length(q2)]
         λ = x[length(q2)+1:end]  # TODO try with and without this line
         push!(qs, q3)
         q1, q2 = q2, q3
         println("t=$(t), constr_norm=$(norm(cconstraint(q3)))")
-        t += Δt
-    end
-    qs
-end
-
-function csim_sym(q1, q2, Δt, time)
-    """ ignores fixed config of first body """
-    qs = [q1, q2]
-    t = 2 * Δt  # first two configs given
-    num_constraints = 10  # 5 constraints per revolute joint
-    λ = zeros(num_constraints)
-    while t < time
-        x0 = cat(q2, λ, dims=1)
-        cond_fn = cget_condition(q1, q2, Δt)
-
-        # symbolics
-        @variables q3_and_λ[1:length(q2)+num_constraints]
-        cond = cond_fn(q3_and_λ)
-        cond_exp = Symbolics.build_function(cond, q3_and_λ)
-        cond_func = eval(cond_exp[1])
-        @bp
-        cond_jac = Symbolics.jacobian(cond, q3_and_λ, simplify=true)
-        cond_jac_exp = Symbolics.build_function(cond_jac, q3_and_λ)
-        cond_jac_fn = eval(cond_jac_exp[1])
-
-        # x = newton2_with_jac(cond_fn, cond_jac_fn, x0, len_config=length(q2), tol=1e-6, merit_norm=2)
-        # need Base.invokelatest because of above call to `eval` causes an error to do with world age
-        # see discussion @ https://discourse.julialang.org/t/how-to-bypass-the-world-age-problem/7012/23
-        x = Base.invokelatest(newton2_with_jac, cond_fn, cond_jac_fn, x0, len_config=length(q2), tol=1e-6, merit_norm=2)
-        q3 = x[1:length(q2)]
-        λ = x[length(q2)+1:end]  # TODO try with and without this line
-        push!(qs, q3)
-        q1, q2 = q2, q3
-        println("t=$(t), constr_norm=$(norm(constraint(q3)))")
         t += Δt
     end
     qs
@@ -194,12 +185,12 @@ function csim_man(q1, q2, Δt, time)
         cond_fn = cget_condition(q1, q2, Δt)
         cond_jac_fn = cget_condition_jacobian(q1, q2, Δt)
 
-        x = newton2_with_jac(cond_fn, cond_jac_fn, x0, apply_attitude=false, len_config=length(q2), merit_norm=2)
+        x = newton2_with_jac(cond_fn, cond_jac_fn, x0, apply_attitude=false, tol=1e-14, len_config=length(q2), merit_norm=2, num_iters=35, print_jac=t≈0.1)
         q3 = x[1:length(q2)]
         λ = x[length(q2)+1:end]  # TODO try with and without this line
         push!(qs, q3)
         q1, q2 = q2, q3
-        println("t=$(t), constr_norm=$(norm(constraint(q3)))")
+        println("t=$(t), constr_norm=$(norm(cconstraint(q3)))")
         t += Δt
     end
     qs
@@ -208,12 +199,106 @@ end
 
 q1 = cget_double_pendulum_state(0, 0)
 q2 = cget_double_pendulum_state(0.02, 0.02)
-q3 = cget_double_pendulum_state(0.5, 0.16)
+q3 = cget_double_pendulum_state(0.12, 0.33)
 
 
-cqs = csim(q1, q2, 0.03, 1)
+cqs = csim(q1, q2, 0.01, 1)
 # cqs_sym = csim_sym(q1, q2, 0.03, 1)
-cqs_man = csim_man(q1, q2, 0.01, 1)
+# cqs_man = csim_man(q1, q2, 0.01, 0.12)
+
+
+cqs_stack = cat(cqs..., dims=2)'
+cqs_stack[:,1]
+
+# cqs_man_stack = cat(cqs_man..., dims=2)'
+# idx=1
+# cqs_stack[:,idx]-cqs_man_stack[:,idx]
+
+[maximum(abs, item) for item in cqs-cqs_man]
+
+Δt = 0.01
+cond_fn = cget_condition(q1, q2, Δt)
+cond_jac_fn = cget_condition_jacobian(q1, q2, Δt)
+test_config = cqs[4]
+test_state = cat(test_config, zeros(10), dims=1)
+using ForwardDiff
+fd_jac = ForwardDiff.jacobian(cond_fn, test_state)
+fd_jac = cat(fd_jac[:, 1:14] * world_attitude_jacobian_from_configs(test_config), fd_jac[:, 15:end], dims=2)
+man_jac = cond_jac_fn(test_state)
+fd_jac ≈ man_jac
+fd_jac[13:22,1:12] - cconstraint_jac(cqs[3])
+(fd_jac - man_jac)[13:22,7:12]
+man_jac
+fd_jac
+# NOTE the jacobians agree wrt λ. they disagree for ∂C(q3)/∂(rot parts of q3) (surprising)
+# #### ∂(first link rot)/∂(first link rot) and ∂(second link rot)/∂(second link rot)
+
+idx=9
+test_state = cat(cqs[idx], zeros(10), dims=1)
+cond_fn = cget_condition(cqs[idx-2], cqs[idx-1], Δt)
+
+cond_jac_fn = cget_condition_jacobian(cqs[idx-2], cqs[idx-1], Δt)
+man_jac = cond_jac_fn(test_state)
+cond_jac_fn_urdf = get_condition_jacobian(expand_state(cqs[idx-2]), expand_state(cqs[idx-1]), Δt)
+man_jac_urdf = cond_jac_fn_urdf(test_state)
+man_jac ≈ man_jac_urdf
+
+cconstraint_jac(q1), constraint_jac(expand_state(q1))[:,7:end]
+
+fd_jac = ForwardDiff.jacobian(cond_fn, test_state)
+fd_jac = cat(fd_jac[:, 1:14] * world_attitude_jacobian_from_configs(cqs[idx]), fd_jac[:, 15:end], dims=2)
+man_jac[13:22,:] ≈ fd_jac[13:22,:]
+
+function expand_state(state)
+    cat([0,0,0,1,0,0,0], state, dims=1)
+end
+
+# cond jac is correct
+for (idx, cq) in enumerate(cqs)
+    if idx <= 5
+        continue
+    end
+    test_state = cat(cq, zeros(10), dims=1)
+    cond_fn = cget_condition(cqs[idx-2], cqs[idx-1], Δt)
+    cond_jac_fn = cget_condition_jacobian(cqs[idx-2], cqs[idx-1], Δt)
+    cond_jac_urdf_fn = get_condition_jacobian(expand_state(cqs[idx-2]), expand_state(cqs[idx-1]), Δt)
+    cond_urdf_fn = get_condition(expand_state(cqs[idx-2]), expand_state(cqs[idx-1]), Δt)
+    man_jac = cond_jac_fn(test_state)
+    man_urdf_jac = cond_jac_urdf_fn(test_state)
+    man_cond = cond_fn(test_state)
+    man_urdf_cond = cond_urdf_fn(test_state)
+    # println(man_cond)
+    # println(man_urdf_cond)
+    # println(man_urdf_cond-man_cond)
+    # break
+    # println(man_jac)
+    # println(man_urdf_jac)
+    # println("$(size(man_jac)), $(size(man_urdf_jac))")
+    fd_jac = ForwardDiff.jacobian(cond_fn, test_state)
+    fd_jac = cat(fd_jac[:, 1:14] * world_attitude_jacobian_from_configs(cq), fd_jac[:, 15:end], dims=2)
+    if man_jac ≉ man_urdf_jac
+        println(idx)
+    end
+    if man_cond ≉ man_urdf_cond
+        println(idx)
+    end
+end
+
+# constraint jac is correct
+for (idx, cq) in enumerate(cqs)
+    man_cjac = cconstraint_jac(cq)
+    fd_cjac = cconstraint_jac_auto(cq)
+    if man_cjac ≉ fd_cjac
+        println(idx)
+    end
+end
+
+for (idx, cq) in enumerate(cqs)
+    if cconstraint_jac(cq) ≉ constraint_jac(expand_state(cq))[:,7:end]
+        println(idx)
+    end
+end
+
 
 # check the configs' indices to sanity check.
 cqs_man_stack = cat(cqs_man..., dims=2)
