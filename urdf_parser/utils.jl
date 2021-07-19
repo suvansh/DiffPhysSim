@@ -72,10 +72,19 @@ function φ(ang)
 	cat(1, ang, dims=1) ./ √(1+norm(ang)^2)
 end
 
+function φ_vec(ang)
+	cat(√(1-norm(ang)^2), ang, dims=1)
+end
+
+function geodesic_quat_dist(q1, q2)
+	return min(1 - q1 ⋅ q2, 1 + q1 ⋅ q2)
+end
+
 function ϕ(quat)
 	w, x, y, z = quat
 	[x, y, z] ./ w
 end
+
 
 function L(quat)
     w, x, y, z = quat

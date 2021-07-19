@@ -108,7 +108,7 @@ function sim(q1, q2, Δt, time)
     λ = zeros(num_constraints)
     while t < time
         x0 = cat(q2, λ, dims=1)
-        x = newton(get_condition(q1, q2, Δt), x0, quat_adjust=true, len_config=length(q2))
+        x = newton(get_condition(q1, q2, Δt), x0, tol=1e-14, quat_adjust=true, len_config=length(q2))
         q3 = x[1:length(q2)]
         λ = x[length(q2)+1:end]  # TODO try with and without this line
         push!(qs, q3)
@@ -162,7 +162,7 @@ function sim_man(q1, q2, Δt, time)
         cond_fn = get_condition(q1, q2, Δt)
         cond_jac_fn = get_condition_jacobian(q1, q2, Δt)
 
-        x = newton2_with_jac(cond_fn, cond_jac_fn, x0, apply_attitude=false, len_config=length(q2), tol=1e-6, merit_norm=2)
+        x = newton2_with_jac(cond_fn, cond_jac_fn, x0, apply_attitude=false, len_config=length(q2), tol=1e-14, merit_norm=2)
         q3 = x[1:length(q2)]
         λ = x[length(q2)+1:end]  # TODO try with and without this line
         push!(qs, q3)
