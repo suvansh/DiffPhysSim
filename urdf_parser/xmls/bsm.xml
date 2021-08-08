@@ -1,0 +1,130 @@
+<mujoco model="BranchScissorMechanism">
+    <compiler angle="radian" />
+    <size njmax="500" nconmax="100" />
+    <worldbody>
+        <body name="four1-1" pos="0.036124 0.003829 -0.185724">
+            <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+            <joint name="world" type="free" damping="0.1" />
+            <body name="arm1-1-1" pos="0 0 0">
+                <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four1-1-to-arm1-1-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm1-1-2" pos="0 0 0">
+                    <inertial pos="-0.0315452 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="arm1-1" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                    <body name="hand1-1" pos="-0.06309 0 0.050716">
+                        <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="hand1-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    </body>
+                </body>
+            </body>
+            <body name="four1-2" pos="-0.017 -0.017 0" quat="0.707105 0 0 0.707108">
+                <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four1-1-to-four1-2" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm1-2-1" pos="0 0 0">
+                    <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="four1-2-to-arm1-2-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    <body name="arm1-2-2" pos="0 0 0">
+                        <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="arm1-2" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                        <body name="hand1-2" pos="-0.06309 0 0.050716">
+                            <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                            <joint name="hand1-2" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+            <body name="four1-3" pos="0 -0.034 0" quat="-3.67321e-06 0 0 1">
+                <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four1-1-to-four1-3" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm1-3-1" pos="0 0 0">
+                    <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="four1-3-to-arm1-3-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    <body name="arm1-3-2" pos="0 0 0">
+                        <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="arm1-3" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                        <body name="hand1-3" pos="-0.06309 0 0.050716">
+                            <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                            <joint name="hand1-3" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+            <body name="four1-4" pos="0.017 -0.017 0" quat="0.707105 0 0 -0.707108">
+                <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four1-1-to-four1-4" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm1-4-1" pos="0 0 0">
+                    <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="four1-4-to-arm1-4-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    <body name="arm1-4-2" pos="0 0 0">
+                        <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="arm1-4" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                        <body name="hand1-4" pos="-0.06309 0 0.050716">
+                            <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                            <joint name="hand1-4" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+        <body name="arm2-1-1" pos="0 0 0">
+            <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+            <joint name="four2-1-to-arm2-1-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+            <body name="arm2-1-2" pos="0 0 0">
+                <inertial pos="-0.0315452 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                <joint name="arm2-1" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                <body name="hand2-1" pos="-0.06309 0 0.050716">
+                    <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="hand2-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                </body>
+            </body>
+        </body>
+        <body name="four2-2" pos="-0.017 -0.017 0" quat="0.707105 0 0 0.707108">
+            <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+            <joint name="four2-1-to-four2-2" pos="0 0 0" axis="1 0 0" damping="0.1" />
+            <body name="arm2-2-1" pos="0 0 0">
+                <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four2-2-to-arm2-2-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm2-2-2" pos="0 0 0">
+                    <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="arm2-2" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                    <body name="hand2-2" pos="-0.06309 0 0.050716">
+                        <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="hand2-2" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    </body>
+                </body>
+            </body>
+        </body>
+        <body name="four2-3" pos="0 -0.034 0" quat="-3.67321e-06 0 0 1">
+            <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+            <joint name="four2-1-to-four2-3" pos="0 0 0" axis="1 0 0" damping="0.1" />
+            <body name="arm2-3-1" pos="0 0 0">
+                <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four2-3-to-arm2-3-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm2-3-2" pos="0 0 0">
+                    <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="arm2-3" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                    <body name="hand2-3" pos="-0.06309 0 0.050716">
+                        <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="hand2-3" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    </body>
+                </body>
+            </body>
+        </body>
+        <body name="four2-4" pos="0.017 -0.017 0" quat="0.707105 0 0 -0.707108">
+            <inertial pos="0 -0.0085 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+            <joint name="four2-1-to-four2-4" pos="0 0 0" axis="1 0 0" damping="0.1" />
+            <body name="arm2-4-1" pos="0 0 0">
+                <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                <joint name="four2-4-to-arm2-4-1" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                <body name="arm2-4-2" pos="0 0 0">
+                    <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                    <joint name="arm2-4" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                    <body name="hand2-4" pos="-0.06309 0 0.050716">
+                        <inertial pos="0 -0.017 0" quat="-1.8366e-06 1 0 0" mass="1" diaginertia="1 1 0.083" />
+                        <joint name="hand2-4" pos="0 0 0" axis="1 0 0" damping="0.1" />
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+</mujoco>

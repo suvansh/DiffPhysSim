@@ -14,18 +14,19 @@ using Debugger
 include("additional_joints.jl")
 include("utils.jl")
 include("newton.jl")
-include("newton2.jl")
-
-singleton_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/singleton.urdf"
-pendulum_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/pendulum.urdf"
-acrobot_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/acrobot.urdf"
-double_pendulum_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/double_pendulum.urdf"
-cassie_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/cassie-old.urdf"
-strandbeest_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/strandbeest.urdf"
-bsm_path = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/urdf_parser/bsm.urdf"
 
 GRAVITATIONAL_ACCELERATION = 9.8
 
+path_to_repo = "/Users/sanjeev/GoogleDrive/CMU/Research/DiffPhysSim/"
+
+singleton_path = path_to_repo*"urdf_parser/urdfs/singleton.urdf"
+pendulum_path = path_to_repo*"urdf_parser/urdfs/pendulum.urdf"
+acrobot_path = path_to_repo*"urdf_parser/urdfs/acrobot.urdf"
+double_pendulum_path = path_to_repo*"urdf_parser/urdfs/double_pendulum.urdf"
+cassie_path = path_to_repo*"urdf_parser/urdfs/cassie-old.urdf"
+strandbeest_path = path_to_repo*"urdf_parser/urdfs/strandbeest.urdf"
+bsm_path = path_to_repo*"urdf_parser/urdfs/bsm.urdf"
+scissor_path = path_to_repo*"urdf_parser/urdfs/scissor_2d.urdf"
 
 
 function add_loop_joints!(mechanism::RBD.Mechanism{T}, urdf::AbstractString) where T
@@ -315,61 +316,15 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
         Δt * (T - U)
     end
 
-    # function get_condition(q1, q2, Δt; first_fixed=false)
-    #     M = mass_matrix
-    #     # chunk states into groups of 7 for each body
-    #     q1_groups = collect(Iterators.partition(q1, 7))
-    #     q2_groups = collect(Iterators.partition(q2, 7))
-    #     function condition(q3_and_λ)
-    #         condition_arr = []
-    #         if first_fixed
-    #             # first body is fixed, don't optimize over its config
-    #             q3 = cat([0,0,0,1,0,0,0], q3_and_λ[1:length(q2)-7], dims=1)
-    #             λ = q3_and_λ[length(q2)-7+1:end]
-    #         else
-    #             q3 = q3_and_λ[1:length(q2)]
-    #             λ = q3_and_λ[length(q2)+1:end]
-    #         end
-    #         # chunk states into groups of 7 for each body
-    #         q3_groups = collect(Iterators.partition(q3, 7))
-    #         # get the velocity and average config per body
-    #         for (body, q1i, q2i, q3i) in zip(mass_bodies,
-    #                 q1_groups[mass_body_idxs], q2_groups[mass_body_idxs],
-    #                 q3_groups[mass_body_idxs])
-    #             Mi, Ji = body.inertia.mass, body.inertia.moment
-    #             pos1, quat1 = q1i[1:3], Quaternion(q1i[4:7]...)
-    #             pos2, quat2 = q2i[1:3], Quaternion(q2i[4:7]...)
-    #             pos3, quat3 = q3i[1:3], Quaternion(q3i[4:7]...)
-    #             v1 = (pos2 - pos1) / Δt
-    #             v2 = (pos3 - pos2) / Δt
-    #             ωq1 = 2 * conj(quat1) * quat2 / Δt
-    #             ωq2 = 2 * conj(quat2) * quat3 / Δt
-    #             ω1 = [ωq1.v1, ωq1.v2, ωq1.v3]
-    #             ω2 = [ωq2.v1, ωq2.v2, ωq2.v3]
-    #             # eq 26 from Jan paper
-    #             lin_cond = Mi * ((v2 - v1) / Δt + gravity * [0, 0, 1])
-    #             # eq 33
-    #             ang_cond = Ji * ω2 * √(4/Δt^2 - ω2'*ω2) + hat(ω2) * Ji * ω2 - Ji * ω1 * √(4/Δt^2 - ω1'*ω1) + hat(ω1) * Ji * ω1
-    #             push!(condition_arr, cat(lin_cond, ang_cond, dims=1))
-    #         end
-    #         condition_arr = cat(condition_arr..., dims=1)  # shape (6*num_bodies,)
-    #         # println(condition_arr)
-    #         # println("condition_arr shape $(size(condition_arr))\n λ shape $(size(λ))\n constraint_jac shape $(size(constraint_jac(q2)))")
-    #         condition_arr -= constraint_jac(q2)[:,7:end]' * λ  # TODO this is a hack to manually ignore the massless root body
-    #         cat(condition_arr, constraint(q3), dims=1)
-    #     end
-    #     condition
-    # end
-
     function get_condition(q1, q2, Δt; force=false, torque=false, first_fixed=true)
         """ force and torque are arrays of length 3*num_bodies representing
         the external force and torque at timestep 2 """
         q1_groups = collect(Iterators.partition(q1, 7))
         q2_groups = collect(Iterators.partition(q2, 7))
-        if !force
+        if force == false
             force = zeros(3*length(q1_groups))
         end
-        if !torque
+        if torque == false
             torque = zeros(3*length(q1_groups))
         end
         force_groups = collect(Iterators.partition(force, 3))
@@ -409,16 +364,7 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
             end
             total_cond = cat(total_cond..., dims=1)
             total_cond -= Δt * constraint_jac(q2)[:,7:end]' * λ
-            # total_cond -= Δt * cconstraint_jac(q2[8:end])' * λ
-            # diff1 = Δt * constraint_jac(q2)[:,7:end]' * λ
-            # diff2 = Δt * cconstraint_jac(q2[8:end])' * λ
-            # con1 = constraint(q3)
-            # con2 = cconstraint(q3[8:end])
-            # if (diff1≉diff2 || con1≉con2) && !(diff1[1] isa ForwardDiff.Dual)
-            #     println("DIFF")
-            # end
             cat(total_cond, constraint(q3), dims=1)
-            # cat(total_cond, cconstraint(q3[8:end]), dims=1)
         end
         condition
     end
@@ -441,7 +387,8 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
             for (body, q1i, q2i, q3i) in zip(mass_bodies,
                     q1_groups[mass_body_idxs], q2_groups[mass_body_idxs],
                     q3_groups[mass_body_idxs])
-                Mi, Ji = body.inertia.mass * Matrix(I, 3, 3), body.inertia.moment
+                Mi = body.inertia.mass * Matrix(I, 3, 3)
+                Ji = body.inertia.moment
                 pos1, quat1 = q1i[1:3], q1i[4:7]
                 pos2, quat2 = q2i[1:3], q2i[4:7]
                 pos3, quat3 = q3i[1:3], q3i[4:7]
@@ -480,66 +427,8 @@ function simulate_unconstrained_system(q1, q2, Δt, lagrangian, time)
     qs
 end
 
-function simulate_constrained_system(q1, q2, Δt, lagrangian, constraint_fn, constraint_jac, num_constraints, time)
-    D1(first, second) = world_attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, Δt), first)
-    D2(first, second) = world_attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, Δt), second)
-    qs = [q1, q2]
-    t = 2 * Δt  # first two configs given
-    # λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
-    λ = zeros(num_constraints)
-    while t < time
-        # x contains q3 ∈ ℜˢ, λ₁ ∈ ℜᶜ, λ₂ ∈ ℜᶜ, where s = num_configs, c = num_constraints
-        objective(x) = cat(D2(q1, q2) + D1(q2, x[1:length(q2)]) + Δt * constraint_jac(x[1:length(q2)])' * x[length(q2)+1:end],
-                            constraint_fn(x[1:length(q2)]), dims=1)
-        x0 = cat(q2, λ, dims=1)
-        x = newton(objective, x0, quat_adjust=true, len_config=length(q2))
-        q3 = x[1:length(q2)]
-        λ = x[length(q2)+1:end]
-        push!(qs, q3)
-        q1, q2 = q2, q3
-        t += Δt
-    end
-    qs
-end
 
-function simulate_constrained_system_v2(q1, q2, Δt, get_condition, num_constraints, time)
-    """ uses manual Lagrangian derivative instead of ForwardDiff """
-    qs = [q1, q2]
-    t = 2 * Δt  # first two configs given
-    # λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
-    λ = zeros(num_constraints)
-    while t < time
-        x0 = cat(q2, λ, dims=1)
-        x = newton(get_condition(q1, q2, Δt), x0, quat_adjust=true, len_config=length(q2))
-        q3 = x[1:length(q2)]
-        λ = x[length(q2)+1:end]  # TODO try with and without this line
-        push!(qs, q3)
-        q1, q2 = q2, q3
-        t += Δt
-    end
-    qs
-end
-
-function simulate_constrained_system_v3(q1, q2, Δt, get_condition, constraint_fn, num_constraints, time)
-    """ ignores fixed config of first body """
-    qs = [q1, q2]
-    t = 2 * Δt  # first two configs given
-    # λ₁, λ₂ = zeros(num_constraints), zeros(num_constraints)
-    λ = zeros(num_constraints)
-    while t < time
-        x0 = cat(q2[8:end], λ, dims=1)  # ignore fixed config of first body
-        x = newton2(get_condition(q1, q2, Δt, first_fixed=true), x0, len_config=length(q2)-7, ls_mult=0.4, merit_norm=2, num_iters=35)
-        q3 = cat([0, 0, 0, 1, 0, 0, 0], x[1:length(q2)-7], dims=1)
-        λ = x[length(q2)-7+1:end]  # TODO try with and without this line
-        push!(qs, q3)
-        q1, q2 = q2, q3
-        println("t=$(t), constr_norm=$(norm(constraint_fn(q3)))")
-        t += Δt
-    end
-    qs
-end
-
-function simulate_constrained_system_v4(q1, q2, Δt, get_condition, constraint_fn, num_constraints, time)
+function simulate_constrained_system_sym(q1, q2, Δt, get_condition, constraint_fn, num_constraints, time)
     """ uses Symbolics in place of ForwardDiff """
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
@@ -557,14 +446,8 @@ function simulate_constrained_system_v4(q1, q2, Δt, get_condition, constraint_f
         cond_jac_exp = Symbolics.build_function(cond_jac, q3_and_λ, expression=Val{false})
         cond_jac_fn = eval(cond_jac_exp[1])
 
-        println(cond_jac_fn(x0))
-        println()
-        println(Symbolics.value.(substitute(expand_derivatives(cond_jac_fn(x0)), Dict(q3_and_λ => x0))))
-        x = newton2_with_jac(cond_fn, x -> substitute(cond_jac_fn(x), Dict(q3_and_λ => x)),
+        x = newton(cond_fn, x -> substitute(cond_jac_fn(x), Dict(q3_and_λ => x)),
                                 x0, len_config=length(q2)-7, tol=1e-6, merit_norm=2)
-        # x = newton2_with_jac(cond_fn, x -> Base.invokelatest(cond_jac_fn, x), x0, len_config=length(q2), tol=1e-6, merit_norm=2)
-        # x = Base.invokelatest(newton2_with_jac, cond_fn, x -> substitute(cond_jac_fn(x), Dict(q3_and_λ => x)),
-        #                         x0, len_config=length(q2)-7, tol=1e-6, merit_norm=2)
         q3 = cat([0, 0, 0, 1, 0, 0, 0], x[1:length(q2)-7], dims=1)
         λ = x[length(q2)-7+1:end]  # TODO try with and without this line
         push!(qs, q3)
@@ -575,29 +458,35 @@ function simulate_constrained_system_v4(q1, q2, Δt, get_condition, constraint_f
     qs
 end
 
-function simulate_constrained_system_v5(q1, q2, Δt, get_condition, get_condition_jacobian, constraint_fn, num_constraints, time; initial_force=false, initial_torque=false)
+function simulate_constrained_system(q1, q2, Δt, time, get_condition, get_condition_jacobian, constraint_fn, num_constraints; initial_force=false, initial_torque=false)
     """ uses analytic Jacobian in place of ForwardDiff """
-    if !initial_force
+    if initial_force == false
         initial_force = zeros(3 * length(q1) ÷ 7)
     end
-    if !initial_torque
+    if initial_torque == false
         initial_torque = zeros(3 * length(q1) ÷ 7)
     end
     qs = [q1, q2]
     t = 2 * Δt  # first two configs given
+    num_timesteps = 2
     λ = zeros(num_constraints)
     while t < time
         x0 = cat(q2[8:end], λ, dims=1)  # ignore fixed config of first body
-        cond_fn = get_condition(q1, q2, Δt)
+        if num_timesteps == 2
+            cond_fn = get_condition(q1, q2, Δt, torque=initial_torque, force=initial_force)
+        else
+            cond_fn = get_condition(q1, q2, Δt)
+        end
         cond_jac_fn = get_condition_jacobian(q1, q2, Δt)
 
-        x = newton2(cond_fn, cond_jac_fn, x0, tol=1e-14, len_config=length(q2)-7, ls_mult=0.4, num_iters=40)
+        x = newton(cond_fn, cond_jac_fn, x0, tol=1e-14, len_config=length(q2)-7, ls_mult=0.4, num_iters=200)
         q3 = cat([0, 0, 0, 1, 0, 0, 0], x[1:length(q2)-7], dims=1)
         λ = x[length(q2)-7+1:end]  # TODO try with and without this line
         push!(qs, q3)
         q1, q2 = q2, q3
         println("t=$(t), constr_norm=$(norm(constraint_fn(q3)))")
         t += Δt
+        num_timesteps += 1
     end
     qs
 end
@@ -615,47 +504,62 @@ function get_test_state(mechanism::RBD.Mechanism; pos_offset=0)
     cat(z..., dims=1)
 end
 
+function transform_to_rot(transform)
+    """ takes in 4x4 transform, returns 3x3 rotation component """
+    [[transform[1] transform[2] transform[3]];
+    [transform[5] transform[6] transform[7]];
+    [transform[9] transform[10] transform[11]]]
+end
 
-mechanism, mass_matrix, constraint_fn, constraint_jac, constraint_jac_auto, lagrangian, get_condition, get_condition_jacobian = process_urdf(double_pendulum_path, floating=false)
-num_constraints = length(constraint_fn(get_test_state(mechanism)))
-
-""" accumulate rotations just to apply to CoM, but for the net translation just accumulate translations directly """
 function get_body_coordinates(body::RBD.RigidBody, mechanism::RBD.Mechanism)
-    """ returns transform from world to body's CoM """
+    """ returns coordinates of body's CoM """
     parent_joint = RBD.joint_to_parent(body, mechanism)
     parent_body = RBD.predecessor(parent_joint, mechanism)
     total_transform = RBD.joint_to_successor(parent_joint).mat * RBD.joint_to_predecessor(parent_joint).mat
     total_translation = RBD.translation(RBD.joint_to_successor(parent_joint)) + RBD.translation(RBD.joint_to_predecessor(parent_joint))
+    # println("translation so far ", total_translation)
     while parent_body !== RBD.root_body(mechanism)
-        println(parent_body)
+        # println(parent_body)
         parent_joint = RBD.joint_to_parent(parent_body, mechanism)
         transform = RBD.joint_to_predecessor(parent_joint)
         total_transform *= transform.mat
-        total_translation += RBD.translation(transform)
+        # total_rotation = transform_to_rot(total_transform)
+        total_translation = RBD.translation(transform) + transform_to_rot(transform.mat) \ total_translation
+        # println("translation so far ", total_translation)
+        # println("rotation so far ", total_rotation)
         parent_body = RBD.predecessor(parent_joint, mechanism)
     end
-    total_rot = [[total_transform[1] total_transform[2] total_transform[3]];
-                            [total_transform[5] total_transform[6] total_transform[7]];
-                            [total_transform[9] total_transform[10] total_transform[11]]]
-    println(total_rot, body.inertia.cross_part / body.inertia.mass)
-    body_to_CoM = total_rot \ body.inertia.cross_part / body.inertia.mass#convert(Array{Float64}, body.inertia.cross_part / body.inertia.mass)
-    println(total_translation, body_to_CoM)
-    println(total_translation + body_to_CoM)
-    total_translation + body_to_CoM
+    # total_rotation is world to body rotation
+    total_rotation = transform_to_rot(total_transform)
+    body_to_CoM = total_rotation \ (body.inertia.cross_part / body.inertia.mass)
+    convert(Array{Float64}, total_translation + body_to_CoM)
 end
 
-b1 = get_bodies(mechanism)[20]
-j1 = RBD.joint_to_parent(b1, mechanism)
-RBD.joint_to_successor(j1)
-RBD.joint_to_predecessor(j1)
-get_body_coordinates(get_bodies(mechanism)[20], mechanism)
+function get_default_state(mechanism::RBD.Mechanism; start_index=1)
+    """ gets initial configuration of a Mechanism starting at the START_INDEXth body """
+    cat([0, 0, 0, 1, 0, 0, 0],
+        [cat(get_body_coordinates(body, mechanism), [1, 0, 0, 0], dims=1)
+            for body in get_bodies(mechanism)[start_index:end]]...,
+        dims=1
+    )
+end
 
-get_bodies(mechanism)[3].frame_definitions
-get_bodies(mechanism)[3]
-get_bodies(mechanism)[1].frame_definitions
-RBD.default_frame(get_bodies(mechanism)[1])
-RBD.bodies(mechanism)[1].frame_definitions
 
+# # testing get_body_coordinates
+# b1 = get_bodies(mechanism)[12]
+# j1 = RBD.joint_to_parent(b1, mechanism)
+# RBD.joint_to_successor(j1)
+# RBD.joint_to_predecessor(j1)
+# get_body_coordinates(get_bodies(mechanism)[2], mechanism)
+# length(get_bodies(mechanism))
+
+function get_torque(mechanism, body_idx1, body_idx2, torque_per_body)
+    """ applies torque to a joint by applying opposite-sign torques at the specified links """
+    torque = zeros(3*length(get_bodies(mechanism)))
+    torque[3*body_idx1-2:3*body_idx1] = torque_per_body
+    torque[3*body_idx2-2:3*body_idx2] = -torque_per_body
+    torque
+end
 
 function get_acrobot_state(θ₁, θ₂)
     return [0, 0, 0, 1, 0, 0, 0,  # fixed
@@ -671,45 +575,28 @@ function get_double_pendulum_state(θ₁, θ₂)
 end
 
 
-# for acrobot
-# test_state0 = get_acrobot_state(0, 0)
-# test_state1 = get_acrobot_state(0.02, 0.02)
-
-# for double pendulum
-test_state0 = get_double_pendulum_state(0, 0)
-test_state1 = get_double_pendulum_state(0.02, 0.02)
-test_state2 = get_double_pendulum_state(0.12, 0.33)
-
-constraint_jac(get_double_pendulum_state(0.2, 0.2))[:,13:18]
-
-constraint_jac(get_double_pendulum_state(0.22, 0.52))[:,7:12]
-constraint_jac_auto(get_double_pendulum_state(0.22, 0.52))[:,7:12]
-# for pendulum
-# test_state0 = get_pendulum_state(0)
-# test_state1 = get_pendulum_state(0.1)
-# test_state2 = get_pendulum_state(0.2)
-
-# for singleton
-# test_state0 = cat(zeros(3), [1, 0, 0, 0], dims=1)
-# test_state1 = cat(zeros(3), [0.999, 0.0, 0.0436, 0.0001], dims=1)
-
-# TESTING JACOBIANS
-constraint_jac(test_state2)[:,7:12]
-constraint_jac_auto(test_state0)[:,7:12]
-cf_0 = constraint_fn(test_state1)
-cj_0 = constraint_jac(test_state0)
-
-num_configs = length(test_state0) ÷ 7
-using Test
-constraint_fn(test_state1 + cat(1, zeros(13), dims=1))
-# pos test
-for i = 1:3
-    δ₁, δ₂ = zeros(6*num_configs), zeros(length(test_state0))
-    δ₁[i] = 1; δ₂[i] = 1
-    println(cf_0 + cj_0 * δ₁ - constraint_fn(test_state1 + δ₂))
+function get_first_configs(path)
+    if path == acrobot_path
+        q0 = get_acrobot_state(0, 0)
+        q1 = get_acrobot_state(0.02, 0.02)
+    elseif path == double_pendulum_path
+        q0 = get_double_pendulum_state(0, 0)
+        q1 = get_double_pendulum_state(0.02, 0.02)
+    elseif path == singleton_path
+        q0 = cat(zeros(3), [1, 0, 0, 0], dims=1)
+        q1 = cat(zeros(3), [0.999, 0.0, 0.0436, 0.0001], dims=1)
+    elseif path == pendulum_path
+        q0 = get_pendulum_state(0)
+        q1 = get_pendulum_state(0.05)
+    else
+        q0 = get_default_state(mechanism, start_index=2)  # ignore first fixed body
+        q1 = q0  # will use torque instead of perturbed state to induce motion
+    end
+    return q0, q1
 end
 
-function test_jac(state, constraint_fn, constraint_jac; ϵ=0.001)
+
+function fd_jac(state, constraint_fn, constraint_jac; ϵ=0.001)
     ∂C_∂q = []  # finite diff jacobian
     c₀ = constraint_fn(state)
     for i = 1:length(state)
@@ -725,84 +612,60 @@ function test_jac(state, constraint_fn, constraint_jac; ϵ=0.001)
     ∂C_∂q, (∂C_∂q * world_attitude_jacobian_from_configs(state))
 end
 
-jac_test_state = test_state1
-J_fd_fat, J_fd = test_jac(jac_test_state, constraint_fn, constraint_jac)
-J_fn = constraint_jac(jac_test_state)
-J_auto = constraint_jac_auto(jac_test_state)
-J_auto[1:5,7:12]
-# J_auto_fat[:,7]
-# J_fd_fat[1:5,8:end],J_auto_fat[1:5,8:end]
-# J_fd_fat[1:5,1:7]-J_auto_fat[1:5,1:7]
-# J_fd_fat[4:5,1:7]
-J_fd[6:10,7:12],J_fn[6:10,7:12],J_auto[6:10,7:12]
-
-J_fn ≈ J_fd, J_fn ≈ J_auto
-constraint_jac(test_state0)
-
-test_state0, test_state1
-get_test_state(mechanism)
-constraint_jac(test_state1)
-constraint_fn(test_state1)
-
-# TESTING GET_CONDITION
-ts0, ts1 = test_state0, test_state1
-cond = get_condition(ts0, ts1, 0.1, first_fixed=true)
-D1(first, second) = world_attitude_jacobian_from_configs(first)' * ForwardDiff.gradient(first -> lagrangian(first, second, 0.1), first)
-D2(first, second) = world_attitude_jacobian_from_configs(second)' * ForwardDiff.gradient(second -> lagrangian(first, second, 0.1), second)
-objective(x) = cat(D2(ts0, ts1) + D1(ts1, x[1:length(ts1)]) + constraint_jac_auto(x[1:length(ts1)])' * x[length(ts1)+1:end],
-                    constraint_fn(x[1:length(ts1)]), dims=1)
-cond(cat(test_state2[8:end], zeros(5), dims=1))
-objective(cat(test_state0, zeros(5), dims=1))
 
 
+### SIMULATION
+# NOTE change active_path between scissor_path, bsm_path, and double_pendulum_path
+active_path = bsm_path
 
+mechanism, mass_matrix, constraint_fn, constraint_jac, constraint_jac_auto, lagrangian, get_condition, get_condition_jacobian = process_urdf(active_path, floating=false)
+num_constraints = length(constraint_fn(get_test_state(mechanism)))
+q0, q1 = get_first_configs(active_path)
 
-# SIMULATION
-
-# qs = simulate_unconstrained_system(test_state0, test_state1, 0.1, lagrangian, 3)
-qs = simulate_constrained_system_v3(test_state0, test_state1, 0.01, get_condition, constraint_fn, num_constraints, 1)
-# qs_sym = simulate_constrained_system_v4(test_state0, test_state1, 0.01, get_condition, constraint_fn, num_constraints, 0.5)
-qs_man = simulate_constrained_system_v5(test_state0, test_state1, 0.01, get_condition, get_condition_jacobian, constraint_fn, num_constraints, 3)
-# qs = simulate_constrained_system(test_state0, test_state1, 0.1, lagrangian, constraint_fn, constraint_jac, num_constraints, 10)
-qs[3]
-
-[norm(constraint_fn(q)) for q in qs]
-constraint_fn(qs[end])
-qs[end][15:17]-qs[end][8:10]
-[norm(q-qs[2]) for q in qs]
-
-
-
-vis = Visualizer()
-delete!(vis)
-render(vis)
-
-# axis_case ∈ ["maximal", "intermediate", "minimal"]
-axis_case = "maximal"
-if axis_case == "maximal"
-    # singleton.urdf should have Ixx = 1.2, Iyy = 2.4, Izz = 0.8
-    # <inertia ixx="1.2" ixy="0" ixz="0" iyy="2.4" iyz="0" izz="0.8" />
-    box_dims = [0.4, 0.2, 0.6]
-elseif axis_case == "intermediate"
-    # singleton.urdf should have Ixx = 2.4, Iyy = 1.2, Izz = 0.8
-    # <inertia ixx="2.4" ixy="0" ixz="0" iyy="1.2" iyz="0" izz="0.8" />
-    box_dims = [0.2, 0.4, 0.6]
-elseif axis_case == "minimal"
-    # singleton.urdf should have Ixx = 1.2, Iyy = 0.8, Izz = 2.4
-    # <inertia ixx="1.2" ixy="0" ixz="0" iyy="0.8" iyz="0" izz="2.4" />
-    box_dims = [0.4, 0.6, 0.2]
+if active_path == bsm_path
+    qs = simulate_constrained_system(q0, q1, 0.01, 1, get_condition,
+                get_condition_jacobian, constraint_fn, num_constraints,
+                initial_torque=get_torque(mechanism, 4, 12, [0, 0.01, 0]))
+elseif active_path == scissor_path
+    qs = simulate_constrained_system(q0, q1, 0.01, 1, get_condition,
+                get_condition_jacobian, constraint_fn, num_constraints,
+                initial_torque=get_torque(mechanism, 3, 4, [0, 0.01, 0]))
 else
-    throw(DomainError(string(axis_case), "unsupported axis case"))
+    qs = simulate_constrained_system(q0, q1, 0.01, 1, get_condition,
+                get_condition_jacobian, constraint_fn, num_constraints)
 end
 
-# animate
-setobject!(vis[:link], Rect(Vec(-box_dims./2...), Vec(box_dims...)))
-anim = Animation()
-for i = 1:length(qs)
-    pos_i, quat_i = qs[i][1:3], Quaternion(qs[i][4:7]...)
-    angle_i, axis_i = angleaxis(quat_i)
-    atframe(anim, i) do
-        settransform!(vis[:link], compose(Translation(qs[i][1:3]), LinearMap(AngleAxis(angle_i, axis_i...))))
-    end
-end
-setanimation!(vis, anim)
+
+# vis = Visualizer()
+# delete!(vis)
+# render(vis)
+#
+# # axis_case ∈ ["maximal", "intermediate", "minimal"]
+# axis_case = "maximal"
+# if axis_case == "maximal"
+#     # singleton.urdf should have Ixx = 1.2, Iyy = 2.4, Izz = 0.8
+#     # <inertia ixx="1.2" ixy="0" ixz="0" iyy="2.4" iyz="0" izz="0.8" />
+#     box_dims = [0.4, 0.2, 0.6]
+# elseif axis_case == "intermediate"
+#     # singleton.urdf should have Ixx = 2.4, Iyy = 1.2, Izz = 0.8
+#     # <inertia ixx="2.4" ixy="0" ixz="0" iyy="1.2" iyz="0" izz="0.8" />
+#     box_dims = [0.2, 0.4, 0.6]
+# elseif axis_case == "minimal"
+#     # singleton.urdf should have Ixx = 1.2, Iyy = 0.8, Izz = 2.4
+#     # <inertia ixx="1.2" ixy="0" ixz="0" iyy="0.8" iyz="0" izz="2.4" />
+#     box_dims = [0.4, 0.6, 0.2]
+# else
+#     throw(DomainError(string(axis_case), "unsupported axis case"))
+# end
+#
+# # animate
+# setobject!(vis[:link], Rect(Vec(-box_dims./2...), Vec(box_dims...)))
+# anim = Animation()
+# for i = 1:length(qs)
+#     pos_i, quat_i = qs[i][1:3], Quaternion(qs[i][4:7]...)
+#     angle_i, axis_i = angleaxis(quat_i)
+#     atframe(anim, i) do
+#         settransform!(vis[:link], compose(Translation(qs[i][1:3]), LinearMap(AngleAxis(angle_i, axis_i...))))
+#     end
+# end
+# setanimation!(vis, anim)

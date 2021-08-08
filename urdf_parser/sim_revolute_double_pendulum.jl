@@ -5,7 +5,6 @@ using LinearAlgebra
 using Symbolics
 include("utils.jl")
 include("newton.jl")
-include("newton2.jl")
 using Debugger
 
 GRAVITY = 9.8

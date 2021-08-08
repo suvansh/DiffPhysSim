@@ -3,95 +3,53 @@ include("utils.jl")
 
 
 """
-	Newton; from https://github.com/thowell/motion_planning/blob/b84f6c729bd7a6e24e407ed27b6bf1a77becefe6/src/solvers/newton.jl
+	Newton's method
 """
-function newton(res::Function, x;
-		tol_r = 1.0e-8, tol_d = 1.0e-6, quat_adjust = false, len_config = 0)
-		# len config used if quat_adjust is true. assumes x contains configs and then lagrange multipliers
+function newton(f::Function, j::Function, x; num_iters=10, tol=1.0e-14, len_config=0, ls_mult=0.5, merit_norm=2, print_jac=false)
 	num_configs = len_config ÷ 7
-
 	y = copy(x)
-	Δy = copy(x)
+	r = f(y)
+	iter = 0
+	# while norm(r, merit_norm) > tol
+	while maximum(abs, r) > tol
+		∇r = j(y)
+		Δy = -1.0 * ∇r \ r
+		# line search
+		α = 1
+		while α > 1e-8
+			yh_arr = []
+			for (yi, dyi) in zip(Iterators.partition(y[1:len_config], 7), Iterators.partition(Δy[1:6*num_configs], 6))
+				pos = yi[1:3] + α*dyi[1:3]
+				# TODO here you could negate `rot`
+				# use min(1+dot prod of quat, 1-dot prod) as quat dist metric
+				# this φ should be diff for the non-MRP version. vec stays same, scalar is filled in to reach unit norm
+				rot = L(yi[4:7]) * φ(α*dyi[4:6])
+				# rot1 = L(yi[4:7]) * φ(α*dyi[4:6])
+				# rot2 = L(yi[4:7]) * φ(-α*dyi[4:6])
+				# if geodesic_quat_dist(yi[4:7], rot1) < geodesic_quat_dist(yi[4:7], rot2)
+				# 	rot = rot1
+				# else
+				# 	rot = rot2
+				# end
 
-    r = res(y)
-
-    iter = 0
-
-	num_iters = 10
-	num_iters_ls = 25
-
-    while norm(r, 2) > tol_r && iter < num_iters
-        ∇r = ForwardDiff.jacobian(res, y)
-		# println("\n∇r ($(size(∇r))) (orig)")
-		if quat_adjust
-			∇r = cat(∇r[:, 1:len_config] * world_attitude_jacobian_from_configs(y[1:len_config]),
-						∇r[:,len_config+1:end], dims=2)
-			# println("$∇r: (∇r)")
-		end
-		# println("\n∇r ($(size(∇r))):")
-		# for i = 1:size(∇r, 1)
-		# 	println("$(∇r[i, :])")
-		# end
-		try
-        	Δy = -1.0 * ∇r \ r
-			# println("Δy: $(size(Δy))")
-		catch
-			@warn "implicit-function failure"
-			return y
-		end
-
-        α = 1.0
-
-		iter_ls = 0
-        while α > 1.0e-8 && iter_ls < num_iters_ls
-            if quat_adjust
-				# ŷ = cat([
-				# 		cat(y_i[1:3] + α * Δy_i[1:3], L(y_i[4:7]) * φ(α * Δy_i[4:6]), dims=1)
-				# 			for (y_i, Δy_i) in zip(Iterators.partition(y[1:len_config], 7),
-				# 								Iterators.partition(Δy[1:6*num_configs], 6))
-				# 		]...,
-				# 		y[len_config+1:end] + α * Δy[6*num_configs+1:end],
-				# 		dims=1)
-
-				# ŷ = cat(
-				# 	y[1:len_config] + α * attitude_jacobian_from_configs(y[1:len_config]) * Δy[1:6*num_configs],
-				# 	y[len_config+1:end] + α * Δy[6*num_configs+1:end],
-				# 	dims=1
-				# )
-
-				yh_arr = []
-				for (yi, dyi) in zip(Iterators.partition(y[1:len_config], 7), Iterators.partition(Δy[1:6*num_configs], 6))
-					pos = yi[1:3] + α*dyi[1:3]
-					rot = L(yi[4:7])*φ(α*dyi[4:6])
-					push!(yh_arr, cat(pos, rot, dims=1))
-				end
-				ŷ = cat(yh_arr..., y[len_config+1:end] + α * Δy[6*num_configs+1:end], dims=1)
-
-				# ŷ = cat(y[1:3] + α * Δy[1:3], L(y[4:7]) * φ(α * Δy[4:6]), dims=1)
-				# println("ŷ: $(size(ŷ))")
-				# ŷ = y + α * convert(Array{Float64}, BlockDiagonal([Matrix(I, 3, 3), quat_ang_mat(y[4:7])])) * Δy
+				push!(yh_arr, cat(pos, rot, dims=1))
+			end
+			ŷ = cat(yh_arr..., y[len_config+1:end] + α * Δy[6*num_configs+1:end], dims=1)
+			r̂ = f(ŷ)
+			if maximum(abs, r̂) < maximum(abs, r)
+				y = ŷ
+				r = r̂
+				break
 			else
-				ŷ = y + α * Δy
+				α *= ls_mult
 			end
-            r̂ = res(ŷ)
+		end
 
-            if norm(r̂) < norm(r)
-                y = ŷ
-                r = r̂
-                break
-            else
-                α *= 0.5
-				iter_ls += 1
-            end
-			if iter_ls == num_iters_ls
-				@warn "line search failed"
-			end
-        end
-
-        iter += 1
-    end
-
-	iter == num_iters && (@warn "Newton failure")
-
-    return y
+		iter += 1
+		if iter == num_iters
+			@warn "Newton failed with norm $(maximum(abs, r))"
+			break
+		end
+	end
+	y
 end

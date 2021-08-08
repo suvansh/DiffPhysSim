@@ -1,0 +1,150 @@
+<mujoco model="BranchScissorMechanism">
+    <compiler angle="radian" />
+    <size njmax="500" nconmax="100" />
+    <worldbody>
+        <body name="four1-1" pos="0.036124 0.003829 -0.185724">
+            <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+			<geom name="four1-1" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+            <body name="arm1-1-1" pos="0 0 0">
+                <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+				<geom name="arm1-1-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                <body name="arm1-1-2" pos="0 0 0">
+                    <inertial pos="-0.0315452 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+					<geom name="arm1-1-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+                    <body name="hand1-1" pos="-0.06309 0 0.050716">
+                        <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+						<geom name="hand1-1" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+                        <body name="arm2-3-1" pos="0 -0.034 0" quat="0 0 0 1">
+                            <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+							<geom name="arm2-3-1" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                            <joint name="hand1-1-to-arm2-3-1" pos="0 0 0" axis="0 1 0" damping="0.1" />
+                            <body name="arm2-3-2" pos="-0.06309 0 0.050716">
+                                <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+								<geom name="arm2-3-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+                                <body name="hand2-3" pos="-0.06309 0 0.050716">
+                                    <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+									<geom name="hand2-3" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+                                </body>
+                            </body>
+                            <body name="four2-3" pos="-0.06309 0 0.050716">
+                                <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+								<geom name="four2-3" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                                <body name="four2-2" pos="0.017 -0.017 0" quat="0.707107 0 0 -0.707107">
+                                    <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+									<geom name="four2-2" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                                    <body name="arm2-2-1" pos="0 0 0">
+                                        <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+										<geom name="arm2-2-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                                        <body name="arm2-2-2" pos="0 0 0">
+                                            <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+											<geom name="arm2-2-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+                                            <body name="hand2-2" pos="-0.06309 0 0.050716">
+                                                <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+												<geom name="hand2-2" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                                <body name="four2-1" pos="0 -0.034 0" quat="0 0 0 1">
+                                    <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+									<geom name="four2-1" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                                    <body name="arm2-1-1" pos="0 0 0">
+                                        <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+										<geom name="arm2-1-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                                        <body name="arm2-1-2" pos="0 0 0">
+                                            <inertial pos="-0.0315452 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                                            <geom name="arm2-1-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+											<body name="hand2-1" pos="-0.06309 0 0.050716">
+                                                <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+												<geom name="hand2-1" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                                <body name="four2-4" pos="-0.017 -0.017 0" quat="0.707107 0 0 0.707107">
+                                    <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+									<geom name="four2-4" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                                    <body name="arm2-4-1" pos="0 0 0">
+                                        <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+										<geom name="arm2-4-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                                        <body name="arm2-4-2" pos="0 0 0">
+                                            <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+                                            <geom name="arm2-4-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+											<body name="hand2-4" pos="-0.06309 0 0.050716">
+                                                <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+												<geom name="hand2-4" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+            <body name="four1-2" pos="-0.017 -0.017 0" euler="0 0 1.57079632679">
+                <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+				<geom name="four1-2" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                <body name="arm1-2-1" pos="0 0 0">
+                    <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+					<geom name="arm1-2-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                    <body name="arm1-2-2" pos="0 0 0">
+                        <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+						<geom name="arm1-2-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+                        <body name="hand1-2" pos="-0.06309 0 0.050716">
+                            <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+							<geom name="hand1-2" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+							<site name="loop2" pos="0 -0.034 0" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+            <body name="four1-3" pos="0 -0.034 0" euler="0 0 3.14159265359">
+                <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+				<geom name="four1-3" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                <body name="arm1-3-1" pos="0 0 0">
+                    <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+					<geom name="arm1-3-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                    <body name="arm1-3-2" pos="0 0 0">
+                        <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+						<geom name="arm1-3-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+                        <body name="hand1-3" pos="-0.06309 0 0.050716">
+                            <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+							<geom name="hand1-3" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+							<site name="loop3" pos="0 -0.034 0" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+            <body name="four1-4" pos="0.017 -0.017 0" euler="0 0 -1.57079632679">
+                <inertial pos="0 -0.0085 0" mass="1" diaginertia="1 1 0.083" />
+				<geom name="four1-4" pos="0 -0.0085 0" size="0.005 0.0085 0.005" type="box" rgba="0 1 1 1" />
+                <body name="arm1-4-1" pos="0 0 0">
+                    <inertial pos="0.031545 0 -0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+					<geom name="arm1-4-1" pos="0.031545 0 -0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 0 1" />
+                    <body name="arm1-4-2" pos="0 0 0">
+                        <inertial pos="-0.031545 0 0.025358" quat="0.637678 0.637678 -0.30556 0.30556" mass="1" diaginertia="1 1 0.083" />
+						<geom name="arm1-4-2" pos="-0.031545 0 0.025358" quat="0 -0.432127 0 0.9018128" size="0.0059505 0.0059505 0.040474" type="box" rgba="1 0 1 1" />
+                        <body name="hand1-4" pos="-0.06309 0 0.050716">
+                            <inertial pos="0 -0.017 0" mass="1" diaginertia="1 1 0.083" />
+							<geom name="hand1-4" pos="0 -0.017 0" euler="1.57079632679 0 0" size="0.008 0.017" type="cylinder" rgba="1 1 0 1" />
+							<site name="loop4" pos="0 -0.034 0" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+    <!-- loop joints as equality constraints -->
+    <equality>
+        <connect anchor="0 -0.034 0" active="true" body1="hand1-2" body2="arm2-4-1" name="loop2" solimp="0.9 0.95 0.001 0.5 6" solref="0.004 1" />
+        <connect anchor="0 -0.034 0" active="true" body1="hand1-3" body2="arm2-1-1" name="loop3" solimp="0.9 0.95 0.001 0.5 6" solref="0.004 1" />
+        <connect anchor="0 -0.034 0" active="true" body1="hand1-4" body2="arm2-2-1" name="loop4" solimp="0.9 0.95 0.001 0.5 6" solref="0.004 1" />
+    </equality>
+	<actuator>
+		<motor gear="0 1 0 0 1 0" joint="hand1-1-to-arm2-3-1" />
+		<!-- <motor gear="0 1 0 0 1 0" site="loop2" />
+		<motor gear="0 1 0 0 1 0" site="loop3" />
+		<motor gear="0 1 0 0 1 0" site="loop4" /> -->
+	</actuator>
+</mujoco>

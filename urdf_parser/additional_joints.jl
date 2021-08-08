@@ -1,6 +1,6 @@
 import RigidBodyDynamics
 RBD = RigidBodyDynamics
 
-struct Ball <: RigidBodyDynamics.JointType{T}
+struct Ball{T} <: RigidBodyDynamics.JointType{T}
 
 end
