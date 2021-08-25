@@ -622,7 +622,8 @@ function resolve_constraint(q₀, C, J, num_constraints, maxiters=20, α=1e-4, t
         jac = J(q)
         A = [Matrix(I, config_dim, config_dim)              jac';
             jac             -α*Matrix(I, num_constraints, num_constraints)]
-        b = [world_attitude_jacobian_from_configs(q)' * (q₀ - q); -C(q)]  # from utils.jl
+        b = [world_attitude_jacobian_from_configs(q)' * config_diff(q₀, q); -C(q)]  # from utils.jl
+        # b = [world_attitude_jacobian_from_configs(q)' * (q₀ - q); -C(q)]  # from utils.jl
         res = A \ b  # TODO confirm that the intermediate λs don't matter?
         Δq, λ = res[1:config_dim], res[config_dim+1:end]
         q_arr = []
