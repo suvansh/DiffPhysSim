@@ -14,14 +14,14 @@
 
 	<link name="neck">
 		<inertial>
-			<origin xyz="0 0 -1" rpy="0 0 0" />
+			<origin xyz="0 0 -0.5" rpy="0 0 0" />
 			<mass value="1" />
 			<inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
 		</inertial>
 		<visual>
-			<origin xyz="0 0 -1" rpy="0 0 0" />
+			<origin xyz="0 0 -0.5" rpy="0 0 0" />
 			<geometry>
-				 <cylinder length="2" radius=".05" />
+				 <cylinder length="1" radius=".05" />
 			</geometry>
 			<material name="red">
 				 <color rgba="1 0 0 1" />
@@ -40,12 +40,30 @@
       <geometry>
          <cylinder length="2" radius=".05" />
       </geometry>
-      <material name="blue">
-	       <color rgba="0 0 1 1" />
+      <material name="green">
+	       <color rgba="0 1 0 1" />
       </material>
     </visual>
   </link>
 
+	<link name="arm_right">
+    <inertial>
+      <origin xyz="0.707106781 0 0.707106781" rpy="0 0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.707106781 0 0.707106781" rpy="0 0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<!-- X1 -->
 	<link name="X1_UL">
     <inertial>
       <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
@@ -80,22 +98,110 @@
     </visual>
   </link>
 
-	<link name="arm_right">
+	<link name="X1_BL">
     <inertial>
-      <origin xyz="0.707106781 0 0.707106781" rpy="0 0.785398163 0" />
+      <origin xyz="0.707106781 0 -0.707106781" rpy="0 -0.785398163 0" />
       <mass value="1" />
       <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
     </inertial>
     <visual>
-      <origin xyz="0.707106781 0 0.707106781" rpy="0 0.785398163 0" />
+      <origin xyz="0.707106781 0 -0.707106781" rpy="0 -0.785398163 0" />
       <geometry>
          <cylinder length="2" radius=".05" />
       </geometry>
-			<material name="blue">
-	       <color rgba="0 0 1 1" />
+			<material name="yellow">
+	       <color rgba="1 1 0 1" />
       </material>
     </visual>
   </link>
+
+	<link name="X1_BR">
+    <inertial>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="yellow">
+	       <color rgba="1 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<!-- X2 -->
+	<link name="X2_UL">
+    <inertial>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="X2_UR">
+    <inertial>
+      <origin xyz="-0.707106781 0 0.707106781" rpy="0 -0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.707106781 0 0.707106781" rpy="0 -0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	 <link name="X2_BL">
+    <inertial>
+      <origin xyz="0.707106781 0 -0.707106781" rpy="0 -0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.707106781 0 -0.707106781" rpy="0 -0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="yellow">
+	       <color rgba="1 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="X2_BR">
+    <inertial>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="yellow">
+	       <color rgba="1 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+
 
 	<!-- JOINTS -->
   <joint name="head" type="fixed">
@@ -109,11 +215,12 @@
   <joint name="neck_base" type="continuous">
     <parent link="neck" />
     <child link="arm_left" />
-    <origin xyz="0 0 -2" />
+    <origin xyz="0 0 -1" />
     <axis xyz="0 1 0" />
     <dynamics damping="0.1" />
   </joint>
 
+	<!-- X1 -->
 	<joint name="shoulder_left" type="continuous">
     <parent link="arm_left" />
     <child link="X1_UL" />
@@ -130,6 +237,22 @@
     <dynamics damping="0.1" />
   </joint>
 
+	<joint name="X1_XJ1" type="fixed">
+    <parent link="X1_UL" />
+    <child link="X1_BR" />
+    <origin xyz="-1.41421356 0 -1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="X1_XJ2" type="fixed">
+    <parent link="X1_UR" />
+    <child link="X1_BL" />
+    <origin xyz="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
 	<joint name="shoulder_right" type="continuous">
     <parent link="X1_UR" />
     <child link="arm_right" />
@@ -138,9 +261,59 @@
     <dynamics damping="0.1" />
   </joint>
 
+	<joint name="X1_XJ2" type="fixed">
+    <parent link="X1_UR" />
+    <child link="X1_BL" />
+    <origin xyz="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
 	<loop_joint name="neck_loop" type="continuous">
     <axis xyz="0 1 0"/>
     <link1 link="arm_right" rpy="0 0 0" xyz="1.41421356 0 1.41421356"/>
-    <link2 link="neck" rpy="0 0 0" xyz="0 0 -2"/>
+    <link2 link="neck" rpy="0 0 0" xyz="0 0 -1"/>
   </loop_joint>
+
+	<!-- X1 to X2 -->
+	<joint name="X1to2L" type="continuous">
+    <parent link="X1_BL" />
+    <child link="X2_UL" />
+    <origin xyz="1.41421356 0 -1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<!-- X2 -->
+
+	<joint name="X2_UJ" type="continuous">
+    <parent link="X2_UL" />
+    <child link="X2_UR" />
+    <origin xyz="-1.41421356 0 -1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="X2_XJ1" type="fixed">
+    <parent link="X2_UL" />
+    <child link="X2_BR" />
+    <origin xyz="-1.41421356 0 -1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="X2_XJ2" type="fixed">
+    <parent link="X2_UR" />
+    <child link="X2_BL" />
+    <origin xyz="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<loop_joint name="X1to2R" type="continuous">
+    <axis xyz="0 1 0"/>
+    <link1 link="X2_UR" rpy="0 0 0" xyz="-1.41421356 0 1.41421356"/>
+    <link2 link="X1_BR" rpy="0 0 0" xyz="-1.41421356 0 -1.41421356"/>
+  </loop_joint>
+
 </robot>

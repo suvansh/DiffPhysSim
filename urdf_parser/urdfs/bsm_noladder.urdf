@@ -59,7 +59,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -110,7 +110,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -161,7 +161,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -212,7 +212,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -248,7 +248,9 @@
       <geometry>
          <cylinder length="0.017" radius="0.005" />
       </geometry>
-      <material name="purple"/>
+			<material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
     </visual>
   </link>
 
@@ -263,7 +265,9 @@
       <geometry>
          <cylinder length="0.017" radius="0.005" />
       </geometry>
-      <material name="green"/>
+			<material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
     </visual>
   </link>
 
@@ -278,7 +282,9 @@
       <geometry>
          <cylinder length="0.017" radius="0.005" />
       </geometry>
-      <material name="green"/>
+			<material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
     </visual>
   </link>
 
@@ -327,7 +333,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -378,7 +384,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -429,7 +435,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -480,7 +486,7 @@
     <visual>
       <origin xyz="0 -0.017 0" rpy="1.57079632679 0 0" />
       <geometry>
-         <cylinder length="0.034" radius="0.016" />
+         <cylinder length="0.034" radius="0.008" />
       </geometry>
       <material name="purple">
 	       <color rgba="1 0 1 1" />
@@ -516,7 +522,9 @@
       <geometry>
          <cylinder length="0.017" radius="0.005" />
       </geometry>
-      <material name="green"/>
+			<material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
     </visual>
   </link>
 
@@ -531,7 +539,9 @@
       <geometry>
          <cylinder length="0.017" radius="0.005" />
       </geometry>
-      <material name="green"/>
+			<material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
     </visual>
   </link>
 
@@ -546,7 +556,9 @@
       <geometry>
          <cylinder length="0.017" radius="0.005" />
       </geometry>
-      <material name="green"/>
+			<material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
     </visual>
   </link>
 
@@ -650,28 +662,28 @@
 		<dynamics damping="0.1" />
 	</joint>
 
-	<joint name="four1-1-to-arm1-1-1" type="fixed">
+	<joint name="wrist1-1" type="continuous">
     <parent link="four1-1" />
     <child link="arm1-1-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />
     <dynamics damping="0.1" />
   </joint>
 
-	<joint name="four1-2-to-arm1-2-1" type="fixed">
+	<joint name="wrist1-2" type="continuous">
     <parent link="four1-2" />
     <child link="arm1-2-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />
     <dynamics damping="0.1" />
   </joint>
 
-	<joint name="four1-3-to-arm1-3-1" type="fixed">
+	<joint name="wrist1-3" type="continuous">
     <parent link="four1-3" />
     <child link="arm1-3-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />
     <dynamics damping="0.1" />
   </joint>
 
-	<joint name="four1-4-to-arm1-4-1" type="fixed">
+	<joint name="wrist1-4" type="continuous">
     <parent link="four1-4" />
     <child link="arm1-4-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />
@@ -761,14 +773,14 @@
 		<dynamics damping="0.1" />
 	</joint>
 
-	<joint name="four2-1-to-arm2-1-1" type="fixed">
+	<joint name="wrist2-1" type="continuous">
     <parent link="four2-1" />
     <child link="arm2-1-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />
     <dynamics damping="0.1" />
   </joint>
 
-	<joint name="four2-2-to-arm2-2-1" type="fixed">
+	<joint name="wrist2-2" type="continuous">
     <parent link="four2-2" />
     <child link="arm2-2-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />
@@ -776,14 +788,14 @@
   </joint>
 
 	<!-- this one is inverted because it comes from BSM 1 -->
-	<joint name="arm2-3-1-to-four2-3" type="fixed">
+	<joint name="wrist2-3" type="continuous">
     <parent link="arm2-3-1" />
     <child link="four2-3" />
 		<origin xyz="-0.06309 0 0.050716" rpy="0 0 0" />
     <dynamics damping="0.1" />
   </joint>
 
-	<joint name="four2-4-to-arm2-4-1" type="fixed">
+	<joint name="wrist2-4" type="continuous">
     <parent link="four2-4" />
     <child link="arm2-4-1" />
 		<origin xyz="0 0 0" rpy="0 0 0" />

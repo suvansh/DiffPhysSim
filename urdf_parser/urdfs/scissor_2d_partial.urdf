@@ -1,0 +1,146 @@
+<?xml version="1.0"?>
+
+<robot name="DoublePendulum">
+  <link name="base_link">
+    <visual>
+      <geometry>
+         <box size=".2 .2 .2" />
+      </geometry>
+      <material name="green">
+	       <color rgba="0 1 0 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="neck">
+		<inertial>
+			<origin xyz="0 0 -1" rpy="0 0 0" />
+			<mass value="1" />
+			<inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+		</inertial>
+		<visual>
+			<origin xyz="0 0 -1" rpy="0 0 0" />
+			<geometry>
+				 <cylinder length="2" radius=".05" />
+			</geometry>
+			<material name="red">
+				 <color rgba="1 0 0 1" />
+			</material>
+		</visual>
+	</link>
+
+	<link name="arm_left">
+    <inertial>
+      <origin xyz="0.707106781 0 -0.707106781" rpy="0 -0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.707106781 0 -0.707106781" rpy="0 -0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+      <material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="X1_UL">
+    <inertial>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.707106781 0 -0.707106781" rpy="0 0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+      <material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="X1_UR">
+    <inertial>
+      <origin xyz="-0.707106781 0 0.707106781" rpy="0 -0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.707106781 0 0.707106781" rpy="0 -0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="purple">
+	       <color rgba="1 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<link name="arm_right">
+    <inertial>
+      <origin xyz="0.707106781 0 0.707106781" rpy="0 0.785398163 0" />
+      <mass value="1" />
+      <inertia ixx="1" ixy="0" ixz="0" iyy="0.33" iyz="0" izz="1" />
+    </inertial>
+    <visual>
+      <origin xyz="0.707106781 0 0.707106781" rpy="0 0.785398163 0" />
+      <geometry>
+         <cylinder length="2" radius=".05" />
+      </geometry>
+			<material name="blue">
+	       <color rgba="0 0 1 1" />
+      </material>
+    </visual>
+  </link>
+
+	<!-- JOINTS -->
+  <joint name="head" type="fixed">
+    <parent link="base_link" />
+    <child link="neck" />
+    <origin xyz="0 0 0" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+  <joint name="neck_base" type="continuous">
+    <parent link="neck" />
+    <child link="arm_left" />
+    <origin xyz="0 0 -2" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="shoulder_left" type="continuous">
+    <parent link="arm_left" />
+    <child link="X1_UL" />
+    <origin xyz="1.41421356 0 -1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="X1_UJ" type="continuous">
+    <parent link="X1_UL" />
+    <child link="X1_UR" />
+    <origin xyz="-1.41421356 0 -1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<joint name="shoulder_right" type="continuous">
+    <parent link="X1_UR" />
+    <child link="arm_right" />
+    <origin xyz="-1.41421356 0 1.41421356" />
+    <axis xyz="0 1 0" />
+    <dynamics damping="0.1" />
+  </joint>
+
+	<loop_joint name="neck_loop" type="continuous">
+    <axis xyz="0 1 0"/>
+    <link1 link="arm_right" rpy="0 0 0" xyz="1.41421356 0 1.41421356"/>
+    <link2 link="neck" rpy="0 0 0" xyz="0 0 -2"/>
+  </loop_joint>
+</robot>
