@@ -7,7 +7,7 @@ using LightXML
 using StaticArrays
 using ForwardDiff
 using Quaternions
-using Symbolics
+# using Symbolics
 # using Roots
 # using MeshCat, GeometryBasics, CoordinateTransformations
 using Debugger
@@ -25,9 +25,9 @@ acrobot_path = path_to_repo*"urdf_parser/urdfs/acrobot.urdf"
 double_pendulum_path = path_to_repo*"urdf_parser/urdfs/double_pendulum.urdf"
 cassie_path = path_to_repo*"urdf_parser/urdfs/cassie-old.urdf"
 strandbeest_path = path_to_repo*"urdf_parser/urdfs/strandbeest.urdf"
-bsm_path = path_to_repo*"urdf_parser/urdfs/bsm.urdf"
+bsm_path = path_to_repo*"urdf_parser/urdfs/bsm_new.urdf"
 scissor_path = path_to_repo*"urdf_parser/urdfs/scissor_2d.urdf"
-
+partial_bsm_path = path_to_repo*"urdf_parser/urdfs/bsm_new_2thread.urdf"
 
 function add_loop_joints!(mechanism::RBD.Mechanism{T}, urdf::AbstractString) where T
     """
@@ -400,7 +400,7 @@ function process_urdf(filename::String; floating=false, gravity=GRAVITATIONAL_AC
             end
             ∂cond_∂config = convert(Array{Float64}, BlockDiagonal(convert(Array{Array{Float64, 2}}, ∂cond_∂config_arr)))
             jac_top = cat(∂cond_∂config * world_attitude_jacobian_from_configs(q3[8:end]), -Δt * constraint_jac(q2)'[7:end,:], dims=2)
-            jac_constr = cat(constraint_jac(q3)[:,7:end], zeros(num_constraints, num_constraints), dims=2)
+            jac_constr = cat(constraint_jac(q3)[:,7:end], -1e-4 * Matrix(I, num_constraints, num_constraints), dims=2)  # tikhonov
             jac = cat(jac_top, jac_constr, dims=1)
             # println(jac)
             jac
@@ -478,7 +478,7 @@ function simulate_constrained_system(q1, q2, Δt, time, get_condition, get_condi
             cond_fn = get_condition(q1, q2, Δt)
         end
         cond_jac_fn = get_condition_jacobian(q1, q2, Δt)
-
+        @bp
         x = newton(cond_fn, cond_jac_fn, x0, tol=1e-14, len_config=length(q2)-7, ls_mult=0.4, num_iters=200)
         q3 = cat([0, 0, 0, 1, 0, 0, 0], x[1:length(q2)-7], dims=1)
         λ = x[length(q2)-7+1:end]  # TODO try with and without this line
@@ -612,20 +612,61 @@ function fd_jac(state, constraint_fn, constraint_jac; ϵ=0.001)
     ∂C_∂q, (∂C_∂q * world_attitude_jacobian_from_configs(state))
 end
 
+function resolve_constraint(q₀, C, J, num_constraints, maxiters=20, α=1e-4, tol=1e-12)
+    λ = zeros(num_constraints)
+    iter = 0
+    config_dim = length(q₀) * 6 ÷ 7  # since we drop a dimension from the quat
+    q = copy(q₀)
+    while iter < maxiters
+        iter += 1
+        jac = J(q)
+        A = [Matrix(I, config_dim, config_dim)              jac';
+            jac             -α*Matrix(I, num_constraints, num_constraints)]
+        b = [world_attitude_jacobian_from_configs(q)' * (q₀ - q); -C(q)]  # from utils.jl
+        res = A \ b  # TODO confirm that the intermediate λs don't matter?
+        Δq, λ = res[1:config_dim], res[config_dim+1:end]
+        q_arr = []
+        for (qi, dqi) in zip(Iterators.partition(q, 7), Iterators.partition(Δq, 6))
+            pos = qi[1:3] + 0.3*dqi[1:3]
+            rot = L(qi[4:7]) * φ_vec(0.3*dqi[4:6])  # φ_vec from utils.jl
+            push!(q_arr, cat(pos, rot, dims=1))
+        end
+        q = cat(q_arr..., dims=1)
+        # if maximum(abs, Δq) < tol
+        if maximum(abs, b) < tol
+            break
+        end
+    end
+    if iter == maxiters
+        @warn "didn't converge"
+    end
+    q
+end
 
 
 ### SIMULATION
 # NOTE change active_path between scissor_path, bsm_path, and double_pendulum_path
-active_path = bsm_path
+active_path = partial_bsm_path
 
 mechanism, mass_matrix, constraint_fn, constraint_jac, constraint_jac_auto, lagrangian, get_condition, get_condition_jacobian = process_urdf(active_path, floating=false)
 num_constraints = length(constraint_fn(get_test_state(mechanism)))
 q0, q1 = get_first_configs(active_path)
+maximum(abs, constraint_fn(q0))  # ∞-norm is 0.126
+q0_adj = resolve_constraint(q0, constraint_fn, constraint_jac, num_constraints)
+norm(q0_adj-q0)  # checking how much it's changed
+maximum(abs, constraint_fn(q0_adj))  # ∞-norm is 0.621 but should be 0 after optimization
+# 2-norm
+norm(q0_adj)  # 5.62
+
 
 if active_path == bsm_path
-    qs = simulate_constrained_system(q0, q1, 0.01, 1, get_condition,
+    qs = simulate_constrained_system(q0, q1, 0.01, 0.5, get_condition,
                 get_condition_jacobian, constraint_fn, num_constraints,
-                initial_torque=get_torque(mechanism, 4, 12, [0, 0.01, 0]))
+                initial_torque=get_torque(mechanism, 12, 37, [0, 0.01, 0]))
+elseif active_path == partial_bsm_path
+    qs = simulate_constrained_system(q0, q1, 0.01, 0.5, get_condition,
+                get_condition_jacobian, constraint_fn, num_constraints,
+                initial_torque=get_torque(mechanism, 7, 31, [0, 0.01, 0]))
 elseif active_path == scissor_path
     qs = simulate_constrained_system(q0, q1, 0.01, 1, get_condition,
                 get_condition_jacobian, constraint_fn, num_constraints,
@@ -635,7 +676,10 @@ else
                 get_condition_jacobian, constraint_fn, num_constraints)
 end
 
-
+qs
+qs_stack = cat(qs..., dims=2)
+constraint_fn(qs_stack[:,1])
+norm([norm(constraint_fn(qs_stack[:,i])) for i=1:100])
 # vis = Visualizer()
 # delete!(vis)
 # render(vis)
