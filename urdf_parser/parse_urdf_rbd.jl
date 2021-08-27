@@ -612,28 +612,38 @@ function fd_jac(state, constraint_fn, constraint_jac; ϵ=0.001)
     ∂C_∂q, (∂C_∂q * world_attitude_jacobian_from_configs(state))
 end
 
-function resolve_constraint(q₀, C, J, num_constraints, maxiters=20, α=1e-4, tol=1e-12)
+function resolve_constraint(q₀, C, J, num_constraints, maxiters=40, α=1e-4, tol=1e-12)
     λ = zeros(num_constraints)
     iter = 0
     config_dim = length(q₀) * 6 ÷ 7  # since we drop a dimension from the quat
     q = copy(q₀)
+    b = [world_attitude_jacobian_from_configs(q)' * config_diff(q₀, q); -C(q)]  # from utils.jl
     while iter < maxiters
         iter += 1
         jac = J(q)
         A = [Matrix(I, config_dim, config_dim)              jac';
             jac             -α*Matrix(I, num_constraints, num_constraints)]
-        b = [world_attitude_jacobian_from_configs(q)' * config_diff(q₀, q); -C(q)]  # from utils.jl
-        # b = [world_attitude_jacobian_from_configs(q)' * (q₀ - q); -C(q)]  # from utils.jl
         res = A \ b  # TODO confirm that the intermediate λs don't matter?
         Δq, λ = res[1:config_dim], res[config_dim+1:end]
-        q_arr = []
-        for (qi, dqi) in zip(Iterators.partition(q, 7), Iterators.partition(Δq, 6))
-            pos = qi[1:3] + 0.3*dqi[1:3]
-            rot = L(qi[4:7]) * φ_vec(0.3*dqi[4:6])  # φ_vec from utils.jl
-            push!(q_arr, cat(pos, rot, dims=1))
+
+        β = 1
+        while β > 1e-8
+            q_arr = []
+            for (qi, dqi) in zip(Iterators.partition(q, 7), Iterators.partition(Δq, 6))
+                pos = qi[1:3] + β * dqi[1:3]
+                rot = L(qi[4:7]) * φ(β * dqi[4:6])  # φ_vec from utils.jl
+                push!(q_arr, cat(pos, rot, dims=1))
+            end
+            q̂ = cat(q_arr..., dims=1)
+            b̂ = [world_attitude_jacobian_from_configs(q̂)' * config_diff(q₀, q̂); -C(q̂)]
+            if maximum(abs, b̂) < maximum(abs, b)
+                q = q̂
+                b = b̂
+                break
+            end
+            β *= 0.5
         end
-        q = cat(q_arr..., dims=1)
-        # if maximum(abs, Δq) < tol
+
         if maximum(abs, b) < tol
             break
         end
@@ -658,7 +668,7 @@ norm(q0_adj-q0)  # checking how much it's changed
 maximum(abs, constraint_fn(q0_adj))  # ∞-norm is 0.621 but should be 0 after optimization
 # 2-norm
 norm(q0_adj)  # 5.62
-
+# if q0 = q*e, then e is in body frame
 
 if active_path == bsm_path
     qs = simulate_constrained_system(q0, q1, 0.01, 0.5, get_condition,

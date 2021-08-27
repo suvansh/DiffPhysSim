@@ -68,6 +68,18 @@ function body_attitude_jacobian_from_configs(q)
     ]))
 end
 
+function config_diff(q1, q2)
+	""" q1-q2, where each consists of 7-element chunks of position and quat """
+	diff_arr = []
+	for (q1i, q2i) in zip(Iterators.partition(q1, 7), Iterators.partition(q2, 7))
+		pos_diff = q1i[1:3] - q2i[1:3]
+		quat_diff = -L(q2i[4:7])' * q1i[4:7]
+		diff = cat(pos_diff, quat_diff, dims=1)
+		push!(diff_arr, diff)
+	end
+	cat(diff_arr..., dims=1)
+end
+
 function φ(ang)
 	cat(1, ang, dims=1) ./ √(1+norm(ang)^2)
 end
