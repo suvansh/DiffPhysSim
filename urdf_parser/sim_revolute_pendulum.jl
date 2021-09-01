@@ -148,7 +148,7 @@ num_constraints = 5
 # test resolve_constraint
 q_test = copy(q1)
 q_test[3] = -3  # -z translation by 2m (should be -1). works
-q_test[3:end] = [-3, 0.9999969, 0, 0.0025, 0]  # -z translation and slight rotation about the x-axis (by 0.005 rad). doesn't work
+q_test[3:end] = [-3, 0.9921977, 0.1246747, 0, 0]  # -z translation and slight rotation about the x-axis (by 0.005 rad). doesn't work
 q_adj = resolve_constraint(q_test, constraint, constraint_jac, num_constraints, α=1e-4, tol=1e-10, ls=false)
 # check the right-hand side vector (which has two pieces)
 world_attitude_jacobian_from_configs(q_adj)' * config_diff(q_test, q_adj)
