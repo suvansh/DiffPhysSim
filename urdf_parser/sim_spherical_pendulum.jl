@@ -2,11 +2,9 @@
 using Quaternions
 using StaticArrays
 using LinearAlgebra
-using Symbolics
-using Debugger
+# using Debugger
 include("utils.jl")
 include("newton.jl")
-include("newton2.jl")
 
 GRAVITY = 9.8
 # pendulum model
@@ -119,38 +117,6 @@ function sim(q1, q2, Δt, time)
     qs
 end
 
-function sim_sym(q1, q2, Δt, time)
-    """ uses symbolics.jl """
-    qs = [q1, q2]
-    t = 2 * Δt  # first two configs given
-    num_constraints = 3  # 3 positional constraints for spherical joint
-    λ = zeros(num_constraints)
-    while t < time
-        x0 = cat(q2, λ, dims=1)
-        cond_fn = get_condition(q1, q2, Δt)
-
-        # symbolics
-        @variables q3_and_λ[1:length(q2)+num_constraints]
-        cond = cond_fn(q3_and_λ)
-        cond_exp = Symbolics.build_function(cond, q3_and_λ)
-        cond_func = eval(cond_exp[1])
-        cond_jac = Symbolics.jacobian(cond, q3_and_λ, simplify=true)
-        cond_jac_exp = Symbolics.build_function(cond_jac, q3_and_λ)
-        cond_jac_fn = eval(cond_jac_exp[1])
-        @bp
-
-        # x = newton2_with_jac(cond_fn, x -> Base.invokelatest(cond_jac_fn, x), x0, len_config=length(q2), tol=1e-6, merit_norm=2)
-        x = Base.invokelatest(newton2_with_jac, cond_fn, cond_jac_fn, x0, len_config=length(q2), tol=1e-6, merit_norm=2)
-        q3 = x[1:length(q2)]
-        λ = x[length(q2)+1:end]  # TODO try with and without this line
-        push!(qs, q3)
-        q1, q2 = q2, q3
-        println("t=$(t), constr_norm=$(norm(constraint(q3)))")
-        t += Δt
-    end
-    qs
-end
-
 function sim_man(q1, q2, Δt, time)
     """ uses manual jacobian of condition """
     qs = [q1, q2]
@@ -179,6 +145,14 @@ q2 = get_pendulum_state(0.1)
 num_constraints = 3
 Δt = 0.01
 
+# test resolve_constraint
+q_test = copy(q1)
+# q_test[3] = -3  # -z translation by 2m (should be -1). works
+q_test[3:end] = [-3, 0.1246747, 0, 0, 0.9921977]  # -z translation and significant rotation about the x-axis (by 0.25 rad). works
+q_adj = resolve_constraint(q_test, constraint, constraint_jac, num_constraints, α=1e-4, tol=1e-10, ls=false)
+# check the right-hand side vector (which has two pieces)
+world_attitude_jacobian_from_configs(q_adj)' * config_diff(q_test, q_adj)
+constraint(q_adj)
 
 cond_fn = get_condition(q1, q2, Δt)
 cond_jac_fn = get_condition_jacobian(q1, q2, Δt)
@@ -192,22 +166,11 @@ fd_jac ≈ fd_man
 λ = zeros(num_constraints)
 x0 = cat(q2, λ, dims=1)
 
-# symbolics
-@variables q3_and_λ[1:length(q2)+num_constraints]
-cond = cond_fn(q3_and_λ)
-cond_exp = Symbolics.build_function(cond, q3_and_λ)
-cond_func = eval(cond_exp[1])
-cond_jac = Symbolics.jacobian(cond, q3_and_λ, simplify=true)
-cond_jac_exp = Symbolics.build_function(cond_jac, q3_and_λ)
-cond_jac_fn = eval(cond_jac_exp[1])
-cond_jac_fn(x0)
-println(cond_jac_fn(x0))
 
 constraint_jac(q2) ≈ constraint_jac_auto(q2)
 
 qs = sim(q1, q2, 0.01, 0.5)
-qs_sym = sim_sym(q1, q2, 0.01, 0.5)
-qs_sym = sim_man(q1, q2, 0.01, 0.5)
+qs_man = sim_man(q1, q2, 0.01, 0.5)
 
 for q in qs[1:300]
     println(q)

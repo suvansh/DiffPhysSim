@@ -162,7 +162,7 @@ function csim(q1, q2, Δt, time)
         x0 = cat(q2, λ, dims=1)
         cond_fn = cget_condition(q1, q2, Δt)
         cond_jac_fn = cget_condition_jacobian(q1, q2, Δt)
-        x = newton2(cond_fn, cond_jac_fn, x0, len_config=length(q2), tol=1e-10, ls_mult=0.4, merit_norm=2, num_iters=40, print_jac=false)#t≈0.1)
+        x = newton(cond_fn, cond_jac_fn, x0, len_config=length(q2), tol=1e-10, ls_mult=0.4, merit_norm=2, num_iters=40, print_jac=false)#t≈0.1)
         q3 = x[1:length(q2)]
         λ = x[length(q2)+1:end]  # TODO try with and without this line
         push!(qs, q3)
@@ -184,7 +184,7 @@ function csim_man(q1, q2, Δt, time)
         cond_fn = cget_condition(q1, q2, Δt)
         cond_jac_fn = cget_condition_jacobian(q1, q2, Δt)
 
-        x = newton2_with_jac(cond_fn, cond_jac_fn, x0, apply_attitude=false, tol=1e-14, len_config=length(q2), merit_norm=2, num_iters=35, print_jac=t≈0.1)
+        x = newton(cond_fn, cond_jac_fn, x0, apply_attitude=false, tol=1e-14, len_config=length(q2), merit_norm=2, num_iters=35, print_jac=t≈0.1)
         q3 = x[1:length(q2)]
         λ = x[length(q2)+1:end]  # TODO try with and without this line
         push!(qs, q3)

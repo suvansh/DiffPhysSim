@@ -151,3 +151,57 @@ function rpy_to_rot(rpy)
         -sin(p)        sin(r)*cos(p)                        cos(r)*cos(p)
     ]
 end
+
+function resolve_constraint(q₀, C, J, num_constraints; maxiters=40, α=1e-4, tol=1e-12, ls=false)
+    λ = zeros(num_constraints)
+    iter = 0
+    config_dim = length(q₀) * 6 ÷ 7  # since we drop a dimension from the quat
+    q = copy(q₀)
+    b = [world_attitude_jacobian_from_configs(q)' * config_diff(q₀, q); -C(q)]  # from utils.jl
+    while iter < maxiters
+        iter += 1
+        jac = J(q)
+        A = [Matrix(I, config_dim, config_dim)              jac';
+            jac             -α*Matrix(I, num_constraints, num_constraints)]
+        res = A \ b  # TODO confirm that the intermediate λs don't matter?
+        Δq, λ = res[1:config_dim], res[config_dim+1:end]
+
+        if ls
+			β = 1
+            while β > 1e-8
+                q_arr = []
+                for (qi, dqi) in zip(Iterators.partition(q, 7), Iterators.partition(Δq, 6))
+                    pos = qi[1:3] + β * dqi[1:3]
+                    rot = L(qi[4:7]) * φ(β * dqi[4:6])  # φ_vec from utils.jl
+                    push!(q_arr, cat(pos, rot, dims=1))
+                end
+                q̂ = cat(q_arr..., dims=1)
+                b̂ = [world_attitude_jacobian_from_configs(q̂)' * config_diff(q₀, q̂); -C(q̂)]
+                if maximum(abs, b̂) < maximum(abs, b)
+                    q = q̂
+                    b = b̂
+                    break
+                end
+                β *= 0.5
+            end
+        else
+			β = 0.5
+            q_arr = []
+            for (qi, dqi) in zip(Iterators.partition(q, 7), Iterators.partition(Δq, 6))
+                pos = qi[1:3] + β * dqi[1:3]
+                rot = L(qi[4:7]) * φ(β * dqi[4:6])  # φ_vec from utils.jl
+                push!(q_arr, cat(pos, rot, dims=1))
+            end
+            q = cat(q_arr..., dims=1)
+            b = [world_attitude_jacobian_from_configs(q)' * config_diff(q₀, q); -C(q)]
+        end
+		println(maximum(abs, Δq))
+        if maximum(abs, Δq) < tol
+            break
+        end
+    end
+    if iter == maxiters
+        @warn "didn't converge"
+    end
+    q
+end
